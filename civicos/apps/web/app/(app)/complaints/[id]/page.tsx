@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { SeverityBadge, StatusBadge } from "@/components/complaints/badges";
 import { ErrorNote } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
-import { SEVERITIES, STATUS_LABEL, STATUSES, when, type Detail } from "@/lib/complaints";
+import { CATEGORY_LABEL, SEVERITIES, STATUS_LABEL, STATUSES, when, type Detail } from "@/lib/complaints";
 import { ROLE_LABEL, type Role } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { complaintAction } from "../actions";
+import { analyseComplaint, complaintAction } from "../actions";
 
 export const metadata: Metadata = { title: "Complaint" };
 
@@ -57,6 +57,7 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
         <p role="status" className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink">
           Complaint submitted. Keep the reference {c.reference} to follow it.
           {sp.photo === "failed" ? " The photo could not be stored, so the report went in without it." : ""}
+          {sp.ai === "failed" ? " The automatic analysis did not run; staff will review it as usual." : ""}
         </p>
       ) : null}
       <ErrorNote message={typeof sp.error === "string" ? sp.error : undefined} />
@@ -132,6 +133,8 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
               </div>
             </dl>
           </section>
+
+          {staff ? <AiPanel c={c} categories={d.categories} /> : null}
 
           <section className="rounded-xl border border-line bg-panel p-5">
             <h2 className="text-sm font-medium">History</h2>
@@ -212,6 +215,82 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
         </aside>
       </div>
     </div>
+  );
+}
+
+type C = NonNullable<Detail["complaint"]>;
+
+/** What the AI analysis suggested, with its numbers, for the officer to weigh. */
+function AiPanel({ c, categories }: { c: C; categories: Detail["categories"] }) {
+  const aiCat = categories.find((k) => k.id === c.ai_category_id)?.name ?? null;
+  const top = Object.entries(c.ai_scores ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const img = c.image_analysis;
+  return (
+    <section className="rounded-xl border border-line bg-panel p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-medium">AI analysis</h2>
+        <form action={analyseComplaint}>
+          <input type="hidden" name="id" value={c.id} />
+          <button type="submit" className="rounded border border-line px-2 py-0.5 text-xs text-muted hover:text-ink">
+            {c.ai_analysed_at ? "Run again" : "Run analysis"}
+          </button>
+        </form>
+      </div>
+      {!c.ai_analysed_at ? (
+        <p className="mt-2 text-xs text-muted">Not analysed yet. The analysis compares the text with each category by meaning, looks for the same problem reported nearby, and checks the photo.</p>
+      ) : (
+        <dl className="mt-3 space-y-3 text-sm">
+          <div>
+            <dt className="text-xs text-muted">Category by meaning</dt>
+            <dd className="mt-1 text-ink">
+              {aiCat ?? "No clear match"}
+              {c.ai_similarity != null ? <span className="ml-2 text-xs text-muted">similarity {c.ai_similarity.toFixed(2)}</span> : null}
+              {top.length ? (
+                <span className="mt-0.5 block text-xs text-muted">
+                  Closest: {top.map(([k, v]) => `${CATEGORY_LABEL[k] ?? k} ${v.toFixed(2)}`).join(" · ")}. A category is suggested only when it is
+                  clearly ahead; similarity is a measure of closeness in meaning, not a probability.
+                </span>
+              ) : null}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted">Same problem reported nearby (within 150 m)</dt>
+            <dd className="mt-1">
+              {c.ai_duplicates?.length ? (
+                <ul className="space-y-1">
+                  {c.ai_duplicates.map((x) => (
+                    <li key={x.id} className="text-xs">
+                      <Link href={`/complaints/${x.id}`} className="font-mono text-accent hover:underline">{x.reference}</Link>
+                      <span className="ml-2 text-muted">{x.category ?? "—"} · {x.distance_m} m · similarity {x.similarity.toFixed(2)}
+                        {x.same_category ? "" : " · different category"} · {STATUS_LABEL[x.status] ?? x.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <span className="text-xs text-muted">None found.</span>}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted">Photo check</dt>
+            <dd className="mt-1 text-xs">
+              {!img ? <span className="text-muted">{c.photo_path ? "Not checked." : "No photo."}</span>
+                : img.error ? <span className="text-warn">The photo could not be checked: {img.error}</span>
+                : (
+                  <>
+                    <span className="text-ink">{img.summary}</span>
+                    <span className="mt-0.5 block text-muted">
+                      Road damage: {img.road_damage ? `yes (${(img.damage_type ?? "").replace("_", " ")}, ${img.severity})` : "none seen"}
+                      {img.other_issue && img.other_issue !== "none" ? ` · also visible: ${img.other_issue.replace("_", " ")}` : ""}
+                      {img.matches_description === false ? " · may not show the problem described" : ""}
+                    </span>
+                    <span className="mt-0.5 block text-faint">{img.model}: {img.note}</span>
+                  </>
+                )}
+            </dd>
+          </div>
+          <p className="text-xs text-faint">Analysed {when(c.ai_analysed_at)} · {c.ai_model}. Suggestions only: confirm or change them when assigning.</p>
+        </dl>
+      )}
+    </section>
   );
 }
 

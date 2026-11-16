@@ -3584,10 +3584,11 @@ begin
   delete from ml_models where organization_id = p_org;   -- cascades to clusters and forecasts
 
   insert into ml_models (organization_id, id, name, kind, method, description, params, metrics, trained_on, trained_at) values
-    (p_org, 'ward-groups-2025', 'Ward groups', 'clustering', 'k-means (scikit-learn), features standardised; water hours log-transformed', 'Groups wards that look alike across complaints, resolution, water and waste. Unsupervised: there are no right answers to train against, so it describes patterns rather than predicting anything.', '{"k":2,"features":[{"key":"complaints_per_10k","label":"Complaints per 10,000 residents (2025)","higher_is_better":false},{"key":"closed_pct","label":"Complaints closed, % (2025)","higher_is_better":true},{"key":"avg_days","label":"Average days to close (2025)","higher_is_better":false},{"key":"water_hours","label":"Water supply, hours per day (2024)","higher_is_better":true},{"key":"water_unfit_pct","label":"Drinking-water samples unfit, % (2024)","higher_is_better":false},{"key":"waste_per_capita","label":"Waste per person, kg per day (2025)","higher_is_better":null},{"key":"slum_pct","label":"Slum population, % (2011)","higher_is_better":null}],"n_init":50,"random_state":42,"groups":[{"cluster":1,"wards":["D","E","F/N","F/S","G/N","G/S","H/E","K/E","K/W","L","M/E","M/W","N","P/N","P/S","R/C","R/N","R/S","S","T"],"mean":{"complaints_per_10k":88.53,"closed_pct":97.9,"avg_days":28.45,"water_hours":6.62,"water_unfit_pct":0.28,"waste_per_capita":0.35,"slum_pct":40.8},"z":{"complaints_per_10k":-0.32,"closed_pct":0.18,"avg_days":-0.11,"water_hours":0.15,"water_unfit_pct":-0.24,"waste_per_capita":-0.36,"slum_pct":0.17},"label":"Low waste per person, few complaints"},{"cluster":2,"wards":["A","B","C","H/W"],"mean":{"complaints_per_10k":171.37,"closed_pct":94.66,"avg_days":37.5,"water_hours":2.28,"water_unfit_pct":1.21,"waste_per_capita":0.61,"slum_pct":21.0},"z":{"complaints_per_10k":1.62,"closed_pct":-0.88,"avg_days":0.56,"water_hours":-0.74,"water_unfit_pct":1.18,"waste_per_capita":1.78,"slum_pct":-0.87},"label":"High waste per person, many complaints"}]}'::jsonb, '{"silhouette":0.353,"candidates":{"2":{"silhouette":0.353,"smallest_group":4},"3":{"silhouette":0.185,"smallest_group":4},"4":{"silhouette":0.191,"smallest_group":1},"5":{"silhouette":0.203,"smallest_group":1}}}'::jsonb, '24 wards; Praja Foundation 2026 report Tables 3, 11, 43; 2025 report Tables 4, 7', '2026-11-15'::date),
-    (p_org, 'complaints-forecast-2026', 'Complaint forecasts', 'forecast', 'Per family of series, the best of three simple methods by rolling backtest; 80% interval from that method''s backtest errors', 'Predicts how many complaints will be registered in 2026, with a range. Built on ten yearly figures per series, so the ranges are wide on purpose.', '{"methods":{"naive":"Last year''s value","mean3":"Average of the last three years","trend":"Straight-line trend over all earlier years"},"backtest_years":[2022,2023,2024,2025],"families":{"ward_total":{"label":"All complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"trend","mape_pct":{"naive":11.7,"mean3":11.5,"trend":9.7},"mae":{"naive":590.8,"mean3":589.1,"trend":489.6},"interval_pct":14.2,"baseline":"naive","improvement_vs_naive_pct":17.1},"ward_swm":{"label":"Solid waste complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"naive","mape_pct":{"naive":23.4,"mean3":28.3,"trend":23.9},"mae":{"naive":239.7,"mean3":307.6,"trend":244.2},"interval_pct":43.6,"baseline":"naive","improvement_vs_naive_pct":0.0},"ward_drainage":{"label":"Drainage complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"naive","mape_pct":{"naive":22.2,"mean3":30.5,"trend":32.0},"mae":{"naive":118.4,"mean3":122.9,"trend":120.7},"interval_pct":27.4,"baseline":"naive","improvement_vs_naive_pct":0.0},"city_issue":{"label":"City complaints, by issue","series":18,"backtest_years":[2022,2023,2024,2025],"chosen":"mean3","mape_pct":{"naive":16.8,"mean3":16.5,"trend":18.6},"mae":{"naive":903.2,"mean3":1036.6,"trend":1038.4},"interval_pct":25.7,"baseline":"naive","improvement_vs_naive_pct":1.8},"city_total":{"label":"City complaints, all issues","series":1,"backtest_years":[2022,2023,2024,2025],"chosen":"trend","mape_pct":{"naive":10.6,"mean3":10.6,"trend":5.8},"mae":{"naive":12404.0,"mean3":12903.6,"trend":7153.0},"interval_pct":10.2,"baseline":"naive","improvement_vs_naive_pct":45.3}}}'::jsonb, '{"ward_total":{"mape_pct":9.7,"naive_mape_pct":11.7},"ward_swm":{"mape_pct":23.4,"naive_mape_pct":23.4},"ward_drainage":{"mape_pct":22.2,"naive_mape_pct":22.2},"city_issue":{"mape_pct":16.5,"naive_mape_pct":16.8},"city_total":{"mape_pct":5.8,"naive_mape_pct":10.6}}'::jsonb, 'Complaints registered 2016-2025; Praja Foundation 2026 report Tables 1, 39, 41, 43', '2026-11-15'::date),
-    (p_org, 'waste-forecast-2026', 'Waste forecasts', 'forecast', 'Best of three simple methods by backtest on 2024 and 2025; 80% interval from that method''s backtest errors', 'Predicts the tonnes of waste BMC will lift per day in 2026, for the city and each ward. Only five years are published, so it is tested on two years and the ranges are wide.', '{"methods":{"naive":"Last year''s value","mean3":"Average of the last three years","trend":"Straight-line trend over all earlier years"},"backtest_years":[2024,2025],"families":{"ward_waste":{"label":"Waste lifted, by ward","series":24,"backtest_years":[2024,2025],"chosen":"naive","mape_pct":{"naive":3.7,"mean3":22.0,"trend":17.1},"mae":{"naive":7.6,"mean3":37.2,"trend":29.3},"interval_pct":5.1,"baseline":"naive","improvement_vs_naive_pct":0.0},"city_waste":{"label":"Waste lifted, whole city","series":1,"backtest_years":[2024,2025],"chosen":"trend","mape_pct":{"naive":2.6,"mean3":5.4,"trend":2.0},"mae":{"naive":180.0,"mean3":370.2,"trend":134.4},"interval_pct":5.1,"baseline":"naive","improvement_vs_naive_pct":23.1}}}'::jsonb, '{"ward_waste":{"mape_pct":3.7,"naive_mape_pct":3.7},"city_waste":{"mape_pct":2.0,"naive_mape_pct":2.6}}'::jsonb, 'Waste lifted per day 2021-2025; Praja Foundation 2026 report Table 37', '2026-11-15'::date),
-    (p_org, 'aqi-forecast-2026', 'Air-quality forecast', 'forecast', 'Best of four seasonal methods by forecasting each whole year 2022-2025 from the years before it; 80% interval from that method''s errors', 'Predicts Mumbai''s average AQI for each month of 2026. Air quality follows a strong yearly cycle (worst in winter, best in the monsoon), so every method is built around that cycle.', '{"methods":{"snaive":"Same month last year","smean3":"Same month, average of the last three years","climatology":"Same month, average of all earlier years","profile":"Seasonal shape of all earlier years, at last year''s level"},"backtest_years":[2022,2023,2024,2025],"chosen":"profile","mape_pct":{"snaive":21.0,"smean3":18.9,"climatology":17.0,"profile":16.1},"mae":{"snaive":19.8,"smean3":18.6,"climatology":16.9,"profile":15.2},"interval_pct":30.0,"backtest":[{"year":2022,"predicted":[183,154,130,90,76,60,61,55,63,103,140,170],"actual":[173,160,160,115,128,51,58,63,46,91,162,191],"mae":17.9},{"year":2023,"predicted":[195,166,144,100,89,64,65,60,66,109,154,186],"actual":[186,180,140,99,70,65,66,51,54,144,131,141],"mae":14.5},{"year":2024,"predicted":[185,161,137,96,83,61,62,57,61,109,144,172],"actual":[113,117,98,98,78,52,43,41,45,77,142,144],"mae":23.6},{"year":2025,"predicted":[143,126,107,78,67,49,48,44,48,85,117,137],"actual":[137,130,108,78,69,56,51,46,48,94,126,122],"mae":4.8}],"naive":"snaive"}'::jsonb, '{"mape_pct":16.1,"mae":15.2,"naive_mape_pct":21.0,"improvement_vs_naive_pct":23.3}'::jsonb, 'Monthly average AQI 2016-2025 (120 months); Praja Foundation 2026 report Table 29', '2026-11-15'::date);
+    (p_org, 'ward-groups-2025', 'Ward groups', 'clustering', 'k-means (scikit-learn), features standardised; water hours log-transformed', 'Groups wards that look alike across complaints, resolution, water and waste. Unsupervised: there are no right answers to train against, so it describes patterns rather than predicting anything.', '{"k":2,"features":[{"key":"complaints_per_10k","label":"Complaints per 10,000 residents (2025)","higher_is_better":false},{"key":"closed_pct","label":"Complaints closed, % (2025)","higher_is_better":true},{"key":"avg_days","label":"Average days to close (2025)","higher_is_better":false},{"key":"water_hours","label":"Water supply, hours per day (2024)","higher_is_better":true},{"key":"water_unfit_pct","label":"Drinking-water samples unfit, % (2024)","higher_is_better":false},{"key":"waste_per_capita","label":"Waste per person, kg per day (2025)","higher_is_better":null},{"key":"slum_pct","label":"Slum population, % (2011)","higher_is_better":null}],"n_init":50,"random_state":42,"groups":[{"cluster":1,"wards":["D","E","F/N","F/S","G/N","G/S","H/E","K/E","K/W","L","M/E","M/W","N","P/N","P/S","R/C","R/N","R/S","S","T"],"mean":{"complaints_per_10k":88.53,"closed_pct":97.9,"avg_days":28.45,"water_hours":6.62,"water_unfit_pct":0.28,"waste_per_capita":0.35,"slum_pct":40.8},"z":{"complaints_per_10k":-0.32,"closed_pct":0.18,"avg_days":-0.11,"water_hours":0.15,"water_unfit_pct":-0.24,"waste_per_capita":-0.36,"slum_pct":0.17},"label":"Low waste per person, few complaints"},{"cluster":2,"wards":["A","B","C","H/W"],"mean":{"complaints_per_10k":171.37,"closed_pct":94.66,"avg_days":37.5,"water_hours":2.28,"water_unfit_pct":1.21,"waste_per_capita":0.61,"slum_pct":21.0},"z":{"complaints_per_10k":1.62,"closed_pct":-0.88,"avg_days":0.56,"water_hours":-0.74,"water_unfit_pct":1.18,"waste_per_capita":1.78,"slum_pct":-0.87},"label":"High waste per person, many complaints"}]}'::jsonb, '{"silhouette":0.353,"candidates":{"2":{"silhouette":0.353,"smallest_group":4},"3":{"silhouette":0.185,"smallest_group":4},"4":{"silhouette":0.191,"smallest_group":1},"5":{"silhouette":0.203,"smallest_group":1}}}'::jsonb, '24 wards; Praja Foundation 2026 report Tables 3, 11, 43; 2025 report Tables 4, 7', '2026-11-16'::date),
+    (p_org, 'complaints-forecast-2026', 'Complaint forecasts', 'forecast', 'Per family of series and per forecast year, the best of three simple methods by rolling backtest at that distance (1, 2 or 3 years ahead); each year''s 80% interval from that method''s backtest errors', 'Predicts how many complaints will be registered in 2026, 2027 and 2028, with a range that widens each year. Built on ten yearly figures per series, so the ranges are wide on purpose.', '{"methods":{"naive":"Last year''s value","mean3":"Average of the last three years","trend":"Straight-line trend over all earlier years"},"backtest_years":[2022,2023,2024,2025],"forecast_years":[2026,2027,2028],"families":{"ward_total":{"label":"All complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"trend","error":"relative","chosen_by_horizon":{"1":"trend","2":"mean3","3":"mean3"},"horizons_tested":[1,2,3],"test_years_by_horizon":{"1":[2022,2023,2024,2025],"2":[2022,2023,2024,2025],"3":[2022,2023,2024,2025]},"mae":{"naive":590.781,"mean3":589.111,"trend":489.62},"interval_basis_by_horizon":{"1":"backtest","2":"backtest","3":"backtest"},"baseline":"naive","mape_pct":{"naive":11.7,"mean3":11.5,"trend":9.7},"mape_pct_by_horizon":{"1":{"naive":11.7,"mean3":11.5,"trend":9.7},"2":{"naive":14.6,"mean3":13.7,"trend":15.1},"3":{"naive":20.8,"mean3":12.8,"trend":29.3}},"interval_pct":14.2,"interval_pct_by_horizon":{"1":14.2,"2":22.0,"3":22.0},"improvement_vs_naive_pct":17.3},"ward_swm":{"label":"Solid waste complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"naive","error":"relative","chosen_by_horizon":{"1":"naive","2":"naive","3":"mean3"},"horizons_tested":[1,2,3],"test_years_by_horizon":{"1":[2022,2023,2024,2025],"2":[2022,2023,2024,2025],"3":[2022,2023,2024,2025]},"mae":{"naive":239.688,"mean3":307.646,"trend":244.207},"interval_basis_by_horizon":{"1":"backtest","2":"backtest","3":"backtest"},"baseline":"naive","mape_pct":{"naive":23.4,"mean3":28.3,"trend":23.9},"mape_pct_by_horizon":{"1":{"naive":23.4,"mean3":28.3,"trend":23.9},"2":{"naive":31.7,"mean3":37.1,"trend":34.5},"3":{"naive":46.9,"mean3":38.4,"trend":52.4}},"interval_pct":43.6,"interval_pct_by_horizon":{"1":43.6,"2":54.1,"3":54.1},"improvement_vs_naive_pct":0.0},"ward_drainage":{"label":"Drainage complaints, by ward","series":24,"backtest_years":[2022,2023,2024,2025],"chosen":"naive","error":"relative","chosen_by_horizon":{"1":"naive","2":"mean3","3":"mean3"},"horizons_tested":[1,2,3],"test_years_by_horizon":{"1":[2022,2023,2024,2025],"2":[2022,2023,2024,2025],"3":[2022,2023,2024,2025]},"mae":{"naive":118.438,"mean3":122.885,"trend":120.653},"interval_basis_by_horizon":{"1":"backtest","2":"backtest","3":"backtest"},"baseline":"naive","mape_pct":{"naive":22.2,"mean3":30.5,"trend":32.0},"mape_pct_by_horizon":{"1":{"naive":22.2,"mean3":30.5,"trend":32.0},"2":{"naive":38.4,"mean3":36.0,"trend":48.3},"3":{"naive":45.6,"mean3":39.5,"trend":77.3}},"interval_pct":27.4,"interval_pct_by_horizon":{"1":27.4,"2":29.8,"3":34.8},"improvement_vs_naive_pct":0.0},"city_issue":{"label":"City complaints, by issue","series":18,"backtest_years":[2022,2023,2024,2025],"chosen":"mean3","error":"relative","chosen_by_horizon":{"1":"mean3","2":"mean3","3":"mean3"},"horizons_tested":[1,2,3],"test_years_by_horizon":{"1":[2022,2023,2024,2025],"2":[2022,2023,2024,2025],"3":[2022,2023,2024,2025]},"mae":{"naive":903.167,"mean3":1036.634,"trend":1038.37},"interval_basis_by_horizon":{"1":"backtest","2":"backtest","3":"backtest"},"baseline":"naive","mape_pct":{"naive":16.8,"mean3":16.5,"trend":18.6},"mape_pct_by_horizon":{"1":{"naive":16.8,"mean3":16.5,"trend":18.6},"2":{"naive":20.8,"mean3":19.6,"trend":26.6},"3":{"naive":24.8,"mean3":23.0,"trend":39.8}},"interval_pct":25.7,"interval_pct_by_horizon":{"1":25.7,"2":33.7,"3":36.3},"improvement_vs_naive_pct":2.1},"city_total":{"label":"City complaints, all issues","series":1,"backtest_years":[2022,2023,2024,2025],"chosen":"trend","error":"relative","chosen_by_horizon":{"1":"trend","2":"trend","3":"mean3"},"horizons_tested":[1,2,3],"test_years_by_horizon":{"1":[2022,2023,2024,2025],"2":[2022,2023,2024,2025],"3":[2022,2023,2024,2025]},"mae":{"naive":12404.0,"mean3":12903.583,"trend":7152.952},"interval_basis_by_horizon":{"1":"backtest","2":"backtest","3":"backtest"},"baseline":"naive","mape_pct":{"naive":10.6,"mean3":10.6,"trend":5.8},"mape_pct_by_horizon":{"1":{"naive":10.6,"mean3":10.6,"trend":5.8},"2":{"naive":13.0,"mean3":14.5,"trend":11.9},"3":{"naive":21.7,"mean3":12.5,"trend":25.6}},"interval_pct":10.2,"interval_pct_by_horizon":{"1":10.2,"2":14.8,"3":16.4},"improvement_vs_naive_pct":44.8}}}'::jsonb, '{"ward_total":{"mape_pct":9.7,"naive_mape_pct":11.7},"ward_swm":{"mape_pct":23.4,"naive_mape_pct":23.4},"ward_drainage":{"mape_pct":22.2,"naive_mape_pct":22.2},"city_issue":{"mape_pct":16.5,"naive_mape_pct":16.8},"city_total":{"mape_pct":5.8,"naive_mape_pct":10.6}}'::jsonb, 'Complaints registered 2016-2025; Praja Foundation 2026 report Tables 1, 39, 41, 43', '2026-11-16'::date),
+    (p_org, 'waste-forecast-2026', 'Waste forecasts', 'forecast', 'Best of three simple methods by backtest on 2024 and 2025; 80% interval from that method''s backtest errors, widened for 2027 and 2028', 'Predicts the tonnes of waste BMC will lift per day in 2026, 2027 and 2028, for the city and each ward. Only five years are published, so only one year ahead could be tested on two years; the 2027 and 2028 ranges are widened from that test.', '{"methods":{"naive":"Last year''s value","mean3":"Average of the last three years","trend":"Straight-line trend over all earlier years"},"backtest_years":[2024,2025],"forecast_years":[2026,2027,2028],"families":{"ward_waste":{"label":"Waste lifted, by ward","series":24,"backtest_years":[2024,2025],"chosen":"naive","error":"relative","chosen_by_horizon":{"1":"naive","2":"naive","3":"naive"},"horizons_tested":[1],"test_years_by_horizon":{"1":[2024,2025],"2":[2025],"3":[]},"mae":{"naive":7.562,"mean3":37.201,"trend":29.347},"interval_basis_by_horizon":{"1":"backtest","2":"scaled from 1-year test","3":"scaled from 1-year test"},"baseline":"naive","mape_pct":{"naive":3.7,"mean3":22.0,"trend":17.1},"mape_pct_by_horizon":{"1":{"naive":3.7,"mean3":22.0,"trend":17.1}},"interval_pct":5.1,"interval_pct_by_horizon":{"1":5.1,"2":7.3,"3":8.9},"improvement_vs_naive_pct":0.0},"city_waste":{"label":"Waste lifted, whole city","series":1,"backtest_years":[2024,2025],"chosen":"trend","error":"relative","chosen_by_horizon":{"1":"trend","2":"trend","3":"trend"},"horizons_tested":[1],"test_years_by_horizon":{"1":[2024,2025],"2":[2025],"3":[]},"mae":{"naive":180.0,"mean3":370.167,"trend":134.417},"interval_basis_by_horizon":{"1":"backtest","2":"scaled from 1-year test","3":"scaled from 1-year test"},"baseline":"naive","mape_pct":{"naive":2.6,"mean3":5.4,"trend":2.0},"mape_pct_by_horizon":{"1":{"naive":2.6,"mean3":5.4,"trend":2.0}},"interval_pct":5.1,"interval_pct_by_horizon":{"1":5.1,"2":7.3,"3":8.9},"improvement_vs_naive_pct":22.6}}}'::jsonb, '{"ward_waste":{"mape_pct":3.7,"naive_mape_pct":3.7},"city_waste":{"mape_pct":2.0,"naive_mape_pct":2.6}}'::jsonb, 'Waste lifted per day 2021-2025; Praja Foundation 2026 report Table 37', '2026-11-16'::date),
+    (p_org, 'aqi-forecast-2026', 'Air-quality forecast', 'forecast', 'For each forecast year, the best of four seasonal methods by forecasting each whole year 2022-2025 from the years up to 1, 2 or 3 years before it; 80% interval from that method''s errors at that distance', 'Predicts Mumbai''s average AQI for each month of 2026, 2027 and 2028. Air quality follows a strong yearly cycle (worst in winter, best in the monsoon), so every method is built around that cycle. Each year uses the method that held up best that many years ahead.', '{"methods":{"snaive":"Same month last year","smean3":"Same month, average of the last three years","climatology":"Same month, average of all earlier years","profile":"Seasonal shape of all earlier years, at last year''s level"},"backtest_years":[2022,2023,2024,2025],"forecast_years":[2026,2027,2028],"chosen":"profile","chosen_by_horizon":{"1":"profile","2":"climatology","3":"smean3"},"mape_pct":{"snaive":21.0,"smean3":18.9,"climatology":17.0,"profile":16.1},"mae":{"snaive":19.8,"smean3":18.6,"climatology":16.9,"profile":15.2},"mape_pct_by_horizon":{"1":{"snaive":21.0,"smean3":18.9,"climatology":17.0,"profile":16.1},"2":{"snaive":23.6,"smean3":19.0,"climatology":17.4,"profile":22.9},"3":{"snaive":24.1,"smean3":17.1,"climatology":17.8,"profile":23.3}},"interval_pct":30.0,"interval_pct_by_horizon":{"1":30.0,"2":30.0,"3":30.0},"backtest":[{"year":2022,"predicted":[183,154,130,90,76,60,61,55,63,103,140,170],"actual":[173,160,160,115,128,51,58,63,46,91,162,191],"mae":17.9},{"year":2023,"predicted":[195,166,144,100,89,64,65,60,66,109,154,186],"actual":[186,180,140,99,70,65,66,51,54,144,131,141],"mae":14.5},{"year":2024,"predicted":[185,161,137,96,83,61,62,57,61,109,144,172],"actual":[113,117,98,98,78,52,43,41,45,77,142,144],"mae":23.6},{"year":2025,"predicted":[143,126,107,78,67,49,48,44,48,85,117,137],"actual":[137,130,108,78,69,56,51,46,48,94,126,122],"mae":4.8}],"naive":"snaive"}'::jsonb, '{"mape_pct":16.1,"mae":15.2,"naive_mape_pct":21.0,"improvement_vs_naive_pct":23.3}'::jsonb, 'Monthly average AQI 2016-2025 (120 months); Praja Foundation 2026 report Table 29', '2026-11-16'::date),
+    (p_org, 'water-forecast', 'Water forecasts', 'forecast', 'Best of three simple methods by backtest on 2023 and 2024; 80% interval from that method''s backtest errors, widened for later years', 'Predicts the share of drinking-water samples found unfit (by ward and city-wide) and the water drawn and supplied city-wide, for 2025 to 2028. Water figures are published only to 2024, from five years, so only one year ahead could be tested and later ranges are widened from that test.', '{"methods":{"naive":"Last year''s value","mean3":"Average of the last three years","trend":"Straight-line trend over all earlier years"},"backtest_years":[2023,2024],"forecast_years":[2025,2026,2027,2028],"families":{"unfit":{"label":"Drinking-water samples unfit, wards and city","series":25,"backtest_years":[2023,2024],"chosen":"mean3","error":"absolute","chosen_by_horizon":{"1":"mean3","2":"mean3","3":"mean3","4":"mean3"},"horizons_tested":[1],"test_years_by_horizon":{"1":[2023,2024],"2":[2024],"3":[],"4":[]},"mae":{"naive":0.54,"mean3":0.434,"trend":0.527},"interval_basis_by_horizon":{"1":"backtest","2":"scaled from 1-year test","3":"scaled from 1-year test","4":"scaled from 1-year test"},"baseline":"naive","mae_by_horizon":{"1":{"naive":0.54,"mean3":0.434,"trend":0.527}},"interval_abs":0.639,"interval_abs_by_horizon":{"1":0.639,"2":0.903,"3":1.106,"4":1.277}},"city_water_fy":{"label":"Water drawn and supplied, city","series":2,"backtest_years":[2023,2024],"chosen":"mean3","error":"relative","chosen_by_horizon":{"1":"mean3","2":"mean3","3":"mean3","4":"mean3"},"horizons_tested":[1],"test_years_by_horizon":{"1":[2023,2024],"2":[2024],"3":[],"4":[]},"mae":{"naive":62.25,"mean3":50.167,"trend":136.458},"interval_basis_by_horizon":{"1":"backtest","2":"scaled from 1-year test","3":"scaled from 1-year test","4":"scaled from 1-year test"},"baseline":"naive","mape_pct":{"naive":1.5,"mean3":1.2,"trend":3.2},"mape_pct_by_horizon":{"1":{"naive":1.5,"mean3":1.2,"trend":3.2}},"interval_pct":1.8,"interval_pct_by_horizon":{"1":1.8,"2":2.6,"3":3.2,"4":3.7},"improvement_vs_naive_pct":17.1}}}'::jsonb, '{"unfit":{"mae_points":0.434,"naive_mae_points":0.54},"city_water_fy":{"mape_pct":1.2,"naive_mape_pct":1.5}}'::jsonb, 'Drinking-water samples unfit 2020-2024 (Praja Foundation 2025 report, Table 7); water drawn and supplied FY 2019-20 to 2023-24 (Table 2)', '2026-11-16'::date);
 
   insert into ml_ward_clusters (organization_id, model_id, zone_id, cluster, features, z)
   select p_org, 'ward-groups-2025', z.id, v.cluster, v.features, v.z
@@ -3623,121 +3624,353 @@ begin
   select p_org, v.model_id, v.metric, z.id, v.category, v.year, v.month, v.value, v.lower, v.upper, v.method, v.family
     from (values
       ('complaints-forecast-2026', 'complaints_registered', 'A', null, 2026, null::int, 2483::numeric, 2130::numeric, 2835::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', null, 2027, null::int, 2554::numeric, 1993::numeric, 3115::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', null, 2028, null::int, 2554::numeric, 1993::numeric, 3115::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'B', null, 2026, null::int, 3311::numeric, 2841::numeric, 3781::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', null, 2027, null::int, 3129::numeric, 2442::numeric, 3817::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', null, 2028, null::int, 3129::numeric, 2442::numeric, 3817::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'C', null, 2026, null::int, 3694::numeric, 3170::numeric, 4219::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', null, 2027, null::int, 3580::numeric, 2794::numeric, 4367::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', null, 2028, null::int, 3580::numeric, 2794::numeric, 4367::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'D', null, 2026, null::int, 3574::numeric, 3067::numeric, 4082::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', null, 2027, null::int, 3876::numeric, 3024::numeric, 4727::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', null, 2028, null::int, 3876::numeric, 3024::numeric, 4727::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'E', null, 2026, null::int, 4666::numeric, 4003::numeric, 5328::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', null, 2027, null::int, 4503::numeric, 3513::numeric, 5492::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', null, 2028, null::int, 4503::numeric, 3513::numeric, 5492::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/N', null, 2026, null::int, 4457::numeric, 3824::numeric, 5090::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', null, 2027, null::int, 4325::numeric, 3375::numeric, 5276::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', null, 2028, null::int, 4325::numeric, 3375::numeric, 5276::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/S', null, 2026, null::int, 3140::numeric, 2694::numeric, 3586::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', null, 2027, null::int, 2754::numeric, 2149::numeric, 3359::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', null, 2028, null::int, 2754::numeric, 2149::numeric, 3359::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/N', null, 2026, null::int, 5210::numeric, 4470::numeric, 5950::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', null, 2027, null::int, 5206::numeric, 4062::numeric, 6350::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', null, 2028, null::int, 5206::numeric, 4062::numeric, 6350::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/S', null, 2026, null::int, 3309::numeric, 2839::numeric, 3779::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', null, 2027, null::int, 3196::numeric, 2494::numeric, 3898::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', null, 2028, null::int, 3196::numeric, 2494::numeric, 3898::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/E', null, 2026, null::int, 4338::numeric, 3722::numeric, 4954::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', null, 2027, null::int, 4195::numeric, 3274::numeric, 5117::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', null, 2028, null::int, 4195::numeric, 3274::numeric, 5117::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/W', null, 2026, null::int, 5309::numeric, 4555::numeric, 6062::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', null, 2027, null::int, 5062::numeric, 3950::numeric, 6174::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', null, 2028, null::int, 5062::numeric, 3950::numeric, 6174::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/E', null, 2026, null::int, 9023::numeric, 7742::numeric, 10304::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', null, 2027, null::int, 8732::numeric, 6814::numeric, 10650::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', null, 2028, null::int, 8732::numeric, 6814::numeric, 10650::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/W', null, 2026, null::int, 8328::numeric, 7146::numeric, 9511::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', null, 2027, null::int, 8306::numeric, 6481::numeric, 10131::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', null, 2028, null::int, 8306::numeric, 6481::numeric, 10131::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'L', null, 2026, null::int, 6849::numeric, 5877::numeric, 7822::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', null, 2027, null::int, 7323::numeric, 5714::numeric, 8931::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', null, 2028, null::int, 7323::numeric, 5714::numeric, 8931::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/E', null, 2026, null::int, 4511::numeric, 3871::numeric, 5152::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', null, 2027, null::int, 4409::numeric, 3440::numeric, 5378::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', null, 2028, null::int, 4409::numeric, 3440::numeric, 5378::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/W', null, 2026, null::int, 4358::numeric, 3739::numeric, 4976::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', null, 2027, null::int, 4026::numeric, 3141::numeric, 4910::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', null, 2028, null::int, 4026::numeric, 3141::numeric, 4910::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'N', null, 2026, null::int, 5946::numeric, 5102::numeric, 6791::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', null, 2027, null::int, 6166::numeric, 4811::numeric, 7520::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', null, 2028, null::int, 6166::numeric, 4811::numeric, 7520::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/N', null, 2026, null::int, 8108::numeric, 6957::numeric, 9259::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', null, 2027, null::int, 7647::numeric, 5967::numeric, 9327::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', null, 2028, null::int, 7647::numeric, 5967::numeric, 9327::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/S', null, 2026, null::int, 4852::numeric, 4163::numeric, 5541::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', null, 2027, null::int, 4933::numeric, 3849::numeric, 6017::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', null, 2028, null::int, 4933::numeric, 3849::numeric, 6017::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/C', null, 2026, null::int, 5758::numeric, 4940::numeric, 6576::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', null, 2027, null::int, 5591::numeric, 4362::numeric, 6819::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', null, 2028, null::int, 5591::numeric, 4362::numeric, 6819::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/N', null, 2026, null::int, 3309::numeric, 2840::numeric, 3779::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', null, 2027, null::int, 3099::numeric, 2418::numeric, 3779::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', null, 2028, null::int, 3099::numeric, 2418::numeric, 3779::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/S', null, 2026, null::int, 5156::numeric, 4424::numeric, 5888::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', null, 2027, null::int, 5135::numeric, 4007::numeric, 6264::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', null, 2028, null::int, 5135::numeric, 4007::numeric, 6264::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'S', null, 2026, null::int, 9499::numeric, 8150::numeric, 10848::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', null, 2027, null::int, 8662::numeric, 6759::numeric, 10565::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', null, 2028, null::int, 8662::numeric, 6759::numeric, 10565::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'T', null, 2026, null::int, 3025::numeric, 2596::numeric, 3455::numeric, 'trend', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', null, 2027, null::int, 2964::numeric, 2313::numeric, 3616::numeric, 'mean3', 'ward_total'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', null, 2028, null::int, 2964::numeric, 2313::numeric, 3616::numeric, 'mean3', 'ward_total'),
       ('complaints-forecast-2026', 'complaints_registered', 'A', 'Solid Waste Management (SWM)', 2026, null::int, 364::numeric, 205::numeric, 523::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', 'Solid Waste Management (SWM)', 2027, null::int, 364::numeric, 167::numeric, 561::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', 'Solid Waste Management (SWM)', 2028, null::int, 345::numeric, 158::numeric, 532::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'B', 'Solid Waste Management (SWM)', 2026, null::int, 553::numeric, 312::numeric, 794::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', 'Solid Waste Management (SWM)', 2027, null::int, 553::numeric, 254::numeric, 852::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', 'Solid Waste Management (SWM)', 2028, null::int, 578::numeric, 265::numeric, 891::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'C', 'Solid Waste Management (SWM)', 2026, null::int, 1208::numeric, 682::numeric, 1734::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', 'Solid Waste Management (SWM)', 2027, null::int, 1208::numeric, 554::numeric, 1862::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', 'Solid Waste Management (SWM)', 2028, null::int, 1263::numeric, 580::numeric, 1947::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'D', 'Solid Waste Management (SWM)', 2026, null::int, 803::numeric, 453::numeric, 1153::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', 'Solid Waste Management (SWM)', 2027, null::int, 803::numeric, 368::numeric, 1238::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', 'Solid Waste Management (SWM)', 2028, null::int, 783::numeric, 359::numeric, 1207::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'E', 'Solid Waste Management (SWM)', 2026, null::int, 1559::numeric, 880::numeric, 2238::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', 'Solid Waste Management (SWM)', 2027, null::int, 1559::numeric, 715::numeric, 2403::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', 'Solid Waste Management (SWM)', 2028, null::int, 1346::numeric, 617::numeric, 2074::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Solid Waste Management (SWM)', 2026, null::int, 1198::numeric, 676::numeric, 1720::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Solid Waste Management (SWM)', 2027, null::int, 1198::numeric, 550::numeric, 1846::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Solid Waste Management (SWM)', 2028, null::int, 1254::numeric, 576::numeric, 1933::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Solid Waste Management (SWM)', 2026, null::int, 526::numeric, 297::numeric, 755::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Solid Waste Management (SWM)', 2027, null::int, 526::numeric, 241::numeric, 811::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Solid Waste Management (SWM)', 2028, null::int, 536::numeric, 246::numeric, 826::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Solid Waste Management (SWM)', 2026, null::int, 1315::numeric, 742::numeric, 1888::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Solid Waste Management (SWM)', 2027, null::int, 1315::numeric, 603::numeric, 2027::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Solid Waste Management (SWM)', 2028, null::int, 1198::numeric, 550::numeric, 1846::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Solid Waste Management (SWM)', 2026, null::int, 536::numeric, 302::numeric, 770::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Solid Waste Management (SWM)', 2027, null::int, 536::numeric, 246::numeric, 826::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Solid Waste Management (SWM)', 2028, null::int, 611::numeric, 280::numeric, 941::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Solid Waste Management (SWM)', 2026, null::int, 742::numeric, 419::numeric, 1065::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Solid Waste Management (SWM)', 2027, null::int, 742::numeric, 340::numeric, 1144::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Solid Waste Management (SWM)', 2028, null::int, 823::numeric, 378::numeric, 1269::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Solid Waste Management (SWM)', 2026, null::int, 897::numeric, 506::numeric, 1288::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Solid Waste Management (SWM)', 2027, null::int, 897::numeric, 412::numeric, 1382::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Solid Waste Management (SWM)', 2028, null::int, 977::numeric, 448::numeric, 1506::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Solid Waste Management (SWM)', 2026, null::int, 1204::numeric, 679::numeric, 1729::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Solid Waste Management (SWM)', 2027, null::int, 1204::numeric, 552::numeric, 1856::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Solid Waste Management (SWM)', 2028, null::int, 1371::numeric, 629::numeric, 2112::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Solid Waste Management (SWM)', 2026, null::int, 2207::numeric, 1245::numeric, 3169::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Solid Waste Management (SWM)', 2027, null::int, 2207::numeric, 1013::numeric, 3401::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Solid Waste Management (SWM)', 2028, null::int, 2125::numeric, 975::numeric, 3275::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'L', 'Solid Waste Management (SWM)', 2026, null::int, 1543::numeric, 871::numeric, 2215::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', 'Solid Waste Management (SWM)', 2027, null::int, 1543::numeric, 708::numeric, 2378::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', 'Solid Waste Management (SWM)', 2028, null::int, 1478::numeric, 678::numeric, 2278::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Solid Waste Management (SWM)', 2026, null::int, 899::numeric, 507::numeric, 1291::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Solid Waste Management (SWM)', 2027, null::int, 899::numeric, 412::numeric, 1386::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Solid Waste Management (SWM)', 2028, null::int, 870::numeric, 399::numeric, 1340::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Solid Waste Management (SWM)', 2026, null::int, 779::numeric, 440::numeric, 1118::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Solid Waste Management (SWM)', 2027, null::int, 779::numeric, 357::numeric, 1201::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Solid Waste Management (SWM)', 2028, null::int, 782::numeric, 359::numeric, 1206::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'N', 'Solid Waste Management (SWM)', 2026, null::int, 836::numeric, 472::numeric, 1200::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', 'Solid Waste Management (SWM)', 2027, null::int, 836::numeric, 384::numeric, 1288::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', 'Solid Waste Management (SWM)', 2028, null::int, 942::numeric, 432::numeric, 1452::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Solid Waste Management (SWM)', 2026, null::int, 1495::numeric, 844::numeric, 2146::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Solid Waste Management (SWM)', 2027, null::int, 1495::numeric, 686::numeric, 2304::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Solid Waste Management (SWM)', 2028, null::int, 1468::numeric, 674::numeric, 2262::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Solid Waste Management (SWM)', 2026, null::int, 1623::numeric, 916::numeric, 2330::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Solid Waste Management (SWM)', 2027, null::int, 1623::numeric, 745::numeric, 2501::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Solid Waste Management (SWM)', 2028, null::int, 1644::numeric, 754::numeric, 2534::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Solid Waste Management (SWM)', 2026, null::int, 969::numeric, 547::numeric, 1391::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Solid Waste Management (SWM)', 2027, null::int, 969::numeric, 445::numeric, 1493::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Solid Waste Management (SWM)', 2028, null::int, 981::numeric, 450::numeric, 1512::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Solid Waste Management (SWM)', 2026, null::int, 699::numeric, 394::numeric, 1004::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Solid Waste Management (SWM)', 2027, null::int, 699::numeric, 321::numeric, 1077::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Solid Waste Management (SWM)', 2028, null::int, 641::numeric, 294::numeric, 987::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Solid Waste Management (SWM)', 2026, null::int, 1110::numeric, 626::numeric, 1594::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Solid Waste Management (SWM)', 2027, null::int, 1110::numeric, 509::numeric, 1711::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Solid Waste Management (SWM)', 2028, null::int, 1011::numeric, 464::numeric, 1558::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'S', 'Solid Waste Management (SWM)', 2026, null::int, 3036::numeric, 1713::numeric, 4359::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', 'Solid Waste Management (SWM)', 2027, null::int, 3036::numeric, 1393::numeric, 4679::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', 'Solid Waste Management (SWM)', 2028, null::int, 2029::numeric, 931::numeric, 3128::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'T', 'Solid Waste Management (SWM)', 2026, null::int, 405::numeric, 229::numeric, 581::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', 'Solid Waste Management (SWM)', 2027, null::int, 405::numeric, 186::numeric, 624::numeric, 'naive', 'ward_swm'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', 'Solid Waste Management (SWM)', 2028, null::int, 351::numeric, 161::numeric, 541::numeric, 'mean3', 'ward_swm'),
       ('complaints-forecast-2026', 'complaints_registered', 'A', 'Drainage', 2026, null::int, 256::numeric, 186::numeric, 326::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', 'Drainage', 2027, null::int, 330::numeric, 231::numeric, 428::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'A', 'Drainage', 2028, null::int, 330::numeric, 215::numeric, 444::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'B', 'Drainage', 2026, null::int, 395::numeric, 287::numeric, 503::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', 'Drainage', 2027, null::int, 490::numeric, 344::numeric, 636::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'B', 'Drainage', 2028, null::int, 490::numeric, 319::numeric, 660::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'C', 'Drainage', 2026, null::int, 547::numeric, 397::numeric, 697::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', 'Drainage', 2027, null::int, 566::numeric, 397::numeric, 735::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'C', 'Drainage', 2028, null::int, 566::numeric, 369::numeric, 763::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'D', 'Drainage', 2026, null::int, 701::numeric, 509::numeric, 893::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', 'Drainage', 2027, null::int, 784::numeric, 550::numeric, 1018::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'D', 'Drainage', 2028, null::int, 784::numeric, 511::numeric, 1057::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'E', 'Drainage', 2026, null::int, 43::numeric, 31::numeric, 55::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', 'Drainage', 2027, null::int, 161::numeric, 113::numeric, 209::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'E', 'Drainage', 2028, null::int, 161::numeric, 105::numeric, 217::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Drainage', 2026, null::int, 460::numeric, 334::numeric, 586::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Drainage', 2027, null::int, 511::numeric, 359::numeric, 663::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/N', 'Drainage', 2028, null::int, 511::numeric, 333::numeric, 689::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Drainage', 2026, null::int, 376::numeric, 273::numeric, 479::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Drainage', 2027, null::int, 411::numeric, 289::numeric, 534::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'F/S', 'Drainage', 2028, null::int, 411::numeric, 268::numeric, 554::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Drainage', 2026, null::int, 798::numeric, 580::numeric, 1016::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Drainage', 2027, null::int, 771::numeric, 541::numeric, 1000::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/N', 'Drainage', 2028, null::int, 771::numeric, 503::numeric, 1039::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Drainage', 2026, null::int, 550::numeric, 399::numeric, 701::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Drainage', 2027, null::int, 551::numeric, 387::numeric, 715::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'G/S', 'Drainage', 2028, null::int, 551::numeric, 359::numeric, 743::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Drainage', 2026, null::int, 688::numeric, 500::numeric, 876::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Drainage', 2027, null::int, 761::numeric, 535::numeric, 988::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/E', 'Drainage', 2028, null::int, 761::numeric, 497::numeric, 1026::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Drainage', 2026, null::int, 642::numeric, 466::numeric, 818::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Drainage', 2027, null::int, 766::numeric, 538::numeric, 994::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'H/W', 'Drainage', 2028, null::int, 766::numeric, 500::numeric, 1032::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Drainage', 2026, null::int, 968::numeric, 703::numeric, 1233::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Drainage', 2027, null::int, 1217::numeric, 855::numeric, 1580::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/E', 'Drainage', 2028, null::int, 1217::numeric, 794::numeric, 1640::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Drainage', 2026, null::int, 1079::numeric, 784::numeric, 1374::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Drainage', 2027, null::int, 1404::numeric, 986::numeric, 1822::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'K/W', 'Drainage', 2028, null::int, 1404::numeric, 916::numeric, 1892::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'L', 'Drainage', 2026, null::int, 906::numeric, 658::numeric, 1154::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', 'Drainage', 2027, null::int, 942::numeric, 662::numeric, 1223::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'L', 'Drainage', 2028, null::int, 942::numeric, 615::numeric, 1270::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Drainage', 2026, null::int, 842::numeric, 611::numeric, 1073::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Drainage', 2027, null::int, 802::numeric, 563::numeric, 1041::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/E', 'Drainage', 2028, null::int, 802::numeric, 523::numeric, 1081::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Drainage', 2026, null::int, 623::numeric, 452::numeric, 794::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Drainage', 2027, null::int, 639::numeric, 448::numeric, 829::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'M/W', 'Drainage', 2028, null::int, 639::numeric, 417::numeric, 861::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'N', 'Drainage', 2026, null::int, 736::numeric, 534::numeric, 938::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', 'Drainage', 2027, null::int, 809::numeric, 568::numeric, 1050::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'N', 'Drainage', 2028, null::int, 809::numeric, 528::numeric, 1091::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Drainage', 2026, null::int, 1152::numeric, 837::numeric, 1467::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Drainage', 2027, null::int, 1064::numeric, 747::numeric, 1381::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/N', 'Drainage', 2028, null::int, 1064::numeric, 694::numeric, 1434::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Drainage', 2026, null::int, 604::numeric, 439::numeric, 769::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Drainage', 2027, null::int, 605::numeric, 425::numeric, 786::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'P/S', 'Drainage', 2028, null::int, 605::numeric, 395::numeric, 816::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Drainage', 2026, null::int, 562::numeric, 408::numeric, 716::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Drainage', 2027, null::int, 653::numeric, 458::numeric, 848::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/C', 'Drainage', 2028, null::int, 653::numeric, 426::numeric, 880::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Drainage', 2026, null::int, 339::numeric, 246::numeric, 432::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Drainage', 2027, null::int, 375::numeric, 263::numeric, 486::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/N', 'Drainage', 2028, null::int, 375::numeric, 244::numeric, 505::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Drainage', 2026, null::int, 657::numeric, 477::numeric, 837::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Drainage', 2027, null::int, 724::numeric, 508::numeric, 939::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'R/S', 'Drainage', 2028, null::int, 724::numeric, 472::numeric, 975::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'S', 'Drainage', 2026, null::int, 912::numeric, 662::numeric, 1162::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', 'Drainage', 2027, null::int, 866::numeric, 608::numeric, 1124::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'S', 'Drainage', 2028, null::int, 866::numeric, 565::numeric, 1167::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', 'T', 'Drainage', 2026, null::int, 350::numeric, 254::numeric, 446::numeric, 'naive', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', 'Drainage', 2027, null::int, 344::numeric, 242::numeric, 446::numeric, 'mean3', 'ward_drainage'),
+      ('complaints-forecast-2026', 'complaints_registered', 'T', 'Drainage', 2028, null::int, 344::numeric, 224::numeric, 464::numeric, 'mean3', 'ward_drainage'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Buildings', 2026, null::int, 15226::numeric, 11314::numeric, 19138::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Buildings', 2027, null::int, 15226::numeric, 10090::numeric, 20361::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Buildings', 2028, null::int, 15226::numeric, 9702::numeric, 20749::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Colony Officer', 2026, null::int, 947::numeric, 704::numeric, 1190::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Colony Officer', 2027, null::int, 947::numeric, 628::numeric, 1266::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Colony Officer', 2028, null::int, 947::numeric, 603::numeric, 1291::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Drainage', 2026, null::int, 16956::numeric, 12600::numeric, 21312::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Drainage', 2027, null::int, 16956::numeric, 11237::numeric, 22675::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Drainage', 2028, null::int, 16956::numeric, 10805::numeric, 23107::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Estate', 2026, null::int, 866::numeric, 644::numeric, 1089::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Estate', 2027, null::int, 866::numeric, 574::numeric, 1159::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Estate', 2028, null::int, 866::numeric, 552::numeric, 1181::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Garden', 2026, null::int, 3516::numeric, 2613::numeric, 4420::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Garden', 2027, null::int, 3516::numeric, 2330::numeric, 4702::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Garden', 2028, null::int, 3516::numeric, 2241::numeric, 4792::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'License', 2026, null::int, 14461::numeric, 10745::numeric, 18176::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'License', 2027, null::int, 14461::numeric, 9583::numeric, 19338::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'License', 2028, null::int, 14461::numeric, 9215::numeric, 19707::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'MCGM Related', 2026, null::int, 742::numeric, 551::numeric, 933::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'MCGM Related', 2027, null::int, 742::numeric, 492::numeric, 992::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'MCGM Related', 2028, null::int, 742::numeric, 473::numeric, 1011::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Medical Officer Health (MOH)', 2026, null::int, 1710::numeric, 1271::numeric, 2150::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Medical Officer Health (MOH)', 2027, null::int, 1710::numeric, 1133::numeric, 2287::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Medical Officer Health (MOH)', 2028, null::int, 1710::numeric, 1090::numeric, 2331::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Miscellaneous issues in Civic', 2026, null::int, 2482::numeric, 1844::numeric, 3119::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Miscellaneous issues in Civic', 2027, null::int, 2482::numeric, 1645::numeric, 3319::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Miscellaneous issues in Civic', 2028, null::int, 2482::numeric, 1581::numeric, 3382::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Pest control', 2026, null::int, 9316::numeric, 6922::numeric, 11709::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Pest control', 2027, null::int, 9316::numeric, 6174::numeric, 12458::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Pest control', 2028, null::int, 9316::numeric, 5936::numeric, 12695::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Pollution', 2026, null::int, 912::numeric, 677::numeric, 1146::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Pollution', 2027, null::int, 912::numeric, 604::numeric, 1219::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Pollution', 2028, null::int, 912::numeric, 581::numeric, 1242::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Roads', 2026, null::int, 10567::numeric, 7852::numeric, 13282::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Roads', 2027, null::int, 10567::numeric, 7003::numeric, 14131::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Roads', 2028, null::int, 10567::numeric, 6733::numeric, 14400::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'School', 2026, null::int, 73::numeric, 54::numeric, 92::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'School', 2027, null::int, 73::numeric, 48::numeric, 98::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'School', 2028, null::int, 73::numeric, 47::numeric, 99::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Shop and Establishment', 2026, null::int, 661::numeric, 491::numeric, 831::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Shop and Establishment', 2027, null::int, 661::numeric, 438::numeric, 884::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Shop and Establishment', 2028, null::int, 661::numeric, 421::numeric, 901::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Solid Waste Management (SWM)', 2026, null::int, 25886::numeric, 19235::numeric, 32537::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Solid Waste Management (SWM)', 2027, null::int, 25886::numeric, 17155::numeric, 34617::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Solid Waste Management (SWM)', 2028, null::int, 25886::numeric, 16495::numeric, 35278::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Storm Water Drainage', 2026, null::int, 2539::numeric, 1887::numeric, 3191::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Storm Water Drainage', 2027, null::int, 2539::numeric, 1683::numeric, 3395::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Storm Water Drainage', 2028, null::int, 2539::numeric, 1618::numeric, 3460::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Toilet', 2026, null::int, 576::numeric, 428::numeric, 724::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Toilet', 2027, null::int, 576::numeric, 382::numeric, 770::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Toilet', 2028, null::int, 576::numeric, 367::numeric, 785::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, 'Water Supply', 2026, null::int, 14484::numeric, 10763::numeric, 18205::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Water Supply', 2027, null::int, 14484::numeric, 9599::numeric, 19369::numeric, 'mean3', 'city_issue'),
+      ('complaints-forecast-2026', 'complaints_registered', null, 'Water Supply', 2028, null::int, 14484::numeric, 9229::numeric, 19739::numeric, 'mean3', 'city_issue'),
       ('complaints-forecast-2026', 'complaints_registered', null, null, 2026, null::int, 125270::numeric, 112504::numeric, 138037::numeric, 'trend', 'city_total'),
+      ('complaints-forecast-2026', 'complaints_registered', null, null, 2027, null::int, 128546::numeric, 109582::numeric, 147511::numeric, 'trend', 'city_total'),
+      ('complaints-forecast-2026', 'complaints_registered', null, null, 2028, null::int, 121919::numeric, 101970::numeric, 141869::numeric, 'mean3', 'city_total'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'A', null, 2026, null::int, 125::numeric, 119::numeric, 131::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'A', null, 2027, null::int, 125::numeric, 116::numeric, 134::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'A', null, 2028, null::int, 125::numeric, 114::numeric, 136::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'B', null, 2026, null::int, 73::numeric, 69::numeric, 77::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'B', null, 2027, null::int, 73::numeric, 68::numeric, 78::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'B', null, 2028, null::int, 73::numeric, 66::numeric, 80::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'C', null, 2026, null::int, 116::numeric, 110::numeric, 122::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'C', null, 2027, null::int, 116::numeric, 108::numeric, 124::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'C', null, 2028, null::int, 116::numeric, 106::numeric, 126::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'D', null, 2026, null::int, 104::numeric, 99::numeric, 109::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'D', null, 2027, null::int, 104::numeric, 96::numeric, 112::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'D', null, 2028, null::int, 104::numeric, 95::numeric, 113::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'E', null, 2026, null::int, 132::numeric, 125::numeric, 139::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'E', null, 2027, null::int, 132::numeric, 122::numeric, 142::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'E', null, 2028, null::int, 132::numeric, 120::numeric, 144::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/N', null, 2026, null::int, 167::numeric, 158::numeric, 176::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/N', null, 2027, null::int, 167::numeric, 155::numeric, 179::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/N', null, 2028, null::int, 167::numeric, 152::numeric, 182::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/S', null, 2026, null::int, 116::numeric, 110::numeric, 122::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/S', null, 2027, null::int, 116::numeric, 108::numeric, 124::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'F/S', null, 2028, null::int, 116::numeric, 106::numeric, 126::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/N', null, 2026, null::int, 266::numeric, 252::numeric, 280::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/N', null, 2027, null::int, 266::numeric, 247::numeric, 285::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/N', null, 2028, null::int, 266::numeric, 242::numeric, 290::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/S', null, 2026, null::int, 107::numeric, 101::numeric, 113::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/S', null, 2027, null::int, 107::numeric, 99::numeric, 115::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'G/S', null, 2028, null::int, 107::numeric, 97::numeric, 117::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/E', null, 2026, null::int, 174::numeric, 165::numeric, 183::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/E', null, 2027, null::int, 174::numeric, 161::numeric, 187::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/E', null, 2028, null::int, 174::numeric, 158::numeric, 190::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/W', null, 2026, null::int, 194::numeric, 184::numeric, 204::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/W', null, 2027, null::int, 194::numeric, 180::numeric, 208::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'H/W', null, 2028, null::int, 194::numeric, 177::numeric, 211::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/E', null, 2026, null::int, 318::numeric, 302::numeric, 334::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/E', null, 2027, null::int, 318::numeric, 295::numeric, 341::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/E', null, 2028, null::int, 318::numeric, 290::numeric, 346::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/W', null, 2026, null::int, 311::numeric, 295::numeric, 327::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/W', null, 2027, null::int, 311::numeric, 288::numeric, 334::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'K/W', null, 2028, null::int, 311::numeric, 283::numeric, 339::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'L', null, 2026, null::int, 368::numeric, 349::numeric, 387::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'L', null, 2027, null::int, 368::numeric, 341::numeric, 395::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'L', null, 2028, null::int, 368::numeric, 335::numeric, 401::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/E', null, 2026, null::int, 398::numeric, 378::numeric, 418::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/E', null, 2027, null::int, 398::numeric, 369::numeric, 427::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/E', null, 2028, null::int, 398::numeric, 363::numeric, 433::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/W', null, 2026, null::int, 235::numeric, 223::numeric, 247::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/W', null, 2027, null::int, 235::numeric, 218::numeric, 252::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'M/W', null, 2028, null::int, 235::numeric, 214::numeric, 256::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'N', null, 2026, null::int, 192::numeric, 182::numeric, 202::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'N', null, 2027, null::int, 192::numeric, 178::numeric, 206::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'N', null, 2028, null::int, 192::numeric, 175::numeric, 209::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/N', null, 2026, null::int, 304::numeric, 288::numeric, 320::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/N', null, 2027, null::int, 304::numeric, 282::numeric, 326::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/N', null, 2028, null::int, 304::numeric, 277::numeric, 331::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/S', null, 2026, null::int, 191::numeric, 181::numeric, 201::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/S', null, 2027, null::int, 191::numeric, 177::numeric, 205::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'P/S', null, 2028, null::int, 191::numeric, 174::numeric, 208::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/C', null, 2026, null::int, 170::numeric, 161::numeric, 179::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/C', null, 2027, null::int, 170::numeric, 158::numeric, 182::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/C', null, 2028, null::int, 170::numeric, 155::numeric, 185::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/N', null, 2026, null::int, 118::numeric, 112::numeric, 124::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/N', null, 2027, null::int, 118::numeric, 109::numeric, 127::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/N', null, 2028, null::int, 118::numeric, 107::numeric, 129::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/S', null, 2026, null::int, 162::numeric, 154::numeric, 170::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/S', null, 2027, null::int, 162::numeric, 150::numeric, 174::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'R/S', null, 2028, null::int, 162::numeric, 148::numeric, 176::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'S', null, 2026, null::int, 277::numeric, 263::numeric, 291::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'S', null, 2027, null::int, 277::numeric, 257::numeric, 297::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'S', null, 2028, null::int, 277::numeric, 252::numeric, 302::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', 'T', null, 2026, null::int, 167::numeric, 158::numeric, 176::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'T', null, 2027, null::int, 167::numeric, 155::numeric, 179::numeric, 'naive', 'ward_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', 'T', null, 2028, null::int, 167::numeric, 152::numeric, 182::numeric, 'naive', 'ward_waste'),
       ('waste-forecast-2026', 'waste_tonnes_per_day', null, null, 2026, null::int, 7174::numeric, 6808::numeric, 7540::numeric, 'trend', 'city_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', null, null, 2027, null::int, 7393::numeric, 6853::numeric, 7933::numeric, 'trend', 'city_waste'),
+      ('waste-forecast-2026', 'waste_tonnes_per_day', null, null, 2028, null::int, 7612::numeric, 6934::numeric, 8289::numeric, 'trend', 'city_waste'),
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 1::int, 144::numeric, 101::numeric, 187::numeric, 'profile', 'city_aqi'),
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 2::int, 128::numeric, 90::numeric, 166::numeric, 'profile', 'city_aqi'),
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 3::int, 109::numeric, 76::numeric, 141::numeric, 'profile', 'city_aqi'),
@@ -3749,7 +3982,139 @@ begin
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 9::int, 49::numeric, 34::numeric, 63::numeric, 'profile', 'city_aqi'),
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 10::int, 87::numeric, 61::numeric, 113::numeric, 'profile', 'city_aqi'),
       ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 11::int, 120::numeric, 84::numeric, 156::numeric, 'profile', 'city_aqi'),
-      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 12::int, 137::numeric, 96::numeric, 178::numeric, 'profile', 'city_aqi')
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2026, 12::int, 137::numeric, 96::numeric, 178::numeric, 'profile', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 1::int, 165::numeric, 116::numeric, 214::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 2::int, 146::numeric, 102::numeric, 190::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 3::int, 125::numeric, 87::numeric, 162::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 4::int, 91::numeric, 63::numeric, 118::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 5::int, 78::numeric, 55::numeric, 101::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 6::int, 57::numeric, 40::numeric, 74::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 7::int, 57::numeric, 40::numeric, 74::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 8::int, 52::numeric, 36::numeric, 67::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 9::int, 56::numeric, 39::numeric, 72::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 10::int, 99::numeric, 70::numeric, 129::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 11::int, 136::numeric, 95::numeric, 177::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2027, 12::int, 156::numeric, 109::numeric, 203::numeric, 'climatology', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 1::int, 145::numeric, 102::numeric, 189::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 2::int, 142::numeric, 100::numeric, 185::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 3::int, 115::numeric, 81::numeric, 150::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 4::int, 92::numeric, 64::numeric, 119::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 5::int, 72::numeric, 51::numeric, 94::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 6::int, 58::numeric, 40::numeric, 75::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 7::int, 53::numeric, 37::numeric, 69::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 8::int, 46::numeric, 32::numeric, 60::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 9::int, 49::numeric, 34::numeric, 64::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 10::int, 105::numeric, 74::numeric, 136::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 11::int, 133::numeric, 93::numeric, 173::numeric, 'smean3', 'city_aqi'),
+      ('aqi-forecast-2026', 'aqi_monthly_avg', null, null, 2028, 12::int, 136::numeric, 95::numeric, 176::numeric, 'smean3', 'city_aqi'),
+      ('water-forecast', 'water_unfit_samples_pct', 'A', null, 2025, null::int, 1.61::numeric, 0.97::numeric, 2.25::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'A', null, 2026, null::int, 1.61::numeric, 0.71::numeric, 2.52::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'A', null, 2027, null::int, 1.61::numeric, 0.51::numeric, 2.72::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'A', null, 2028, null::int, 1.61::numeric, 0.34::numeric, 2.89::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'B', null, 2025, null::int, 3.49::numeric, 2.85::numeric, 4.13::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'B', null, 2026, null::int, 3.49::numeric, 2.58::numeric, 4.39::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'B', null, 2027, null::int, 3.49::numeric, 2.38::numeric, 4.59::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'B', null, 2028, null::int, 3.49::numeric, 2.21::numeric, 4.76::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'C', null, 2025, null::int, 0.25::numeric, 0::numeric, 0.89::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'C', null, 2026, null::int, 0.25::numeric, 0::numeric, 1.16::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'C', null, 2027, null::int, 0.25::numeric, 0::numeric, 1.36::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'C', null, 2028, null::int, 0.25::numeric, 0::numeric, 1.53::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'D', null, 2025, null::int, 0.75::numeric, 0.11::numeric, 1.39::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'D', null, 2026, null::int, 0.75::numeric, 0::numeric, 1.65::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'D', null, 2027, null::int, 0.75::numeric, 0::numeric, 1.85::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'D', null, 2028, null::int, 0.75::numeric, 0::numeric, 2.02::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'E', null, 2025, null::int, 0.6::numeric, 0::numeric, 1.24::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'E', null, 2026, null::int, 0.6::numeric, 0::numeric, 1.5::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'E', null, 2027, null::int, 0.6::numeric, 0::numeric, 1.7::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'E', null, 2028, null::int, 0.6::numeric, 0::numeric, 1.87::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/N', null, 2025, null::int, 0.24::numeric, 0::numeric, 0.88::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/N', null, 2026, null::int, 0.24::numeric, 0::numeric, 1.14::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/N', null, 2027, null::int, 0.24::numeric, 0::numeric, 1.34::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/N', null, 2028, null::int, 0.24::numeric, 0::numeric, 1.51::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/S', null, 2025, null::int, 0.22::numeric, 0::numeric, 0.86::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/S', null, 2026, null::int, 0.22::numeric, 0::numeric, 1.12::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/S', null, 2027, null::int, 0.22::numeric, 0::numeric, 1.33::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'F/S', null, 2028, null::int, 0.22::numeric, 0::numeric, 1.5::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/N', null, 2025, null::int, 0.62::numeric, 0::numeric, 1.26::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/N', null, 2026, null::int, 0.62::numeric, 0::numeric, 1.52::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/N', null, 2027, null::int, 0.62::numeric, 0::numeric, 1.73::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/N', null, 2028, null::int, 0.62::numeric, 0::numeric, 1.9::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/S', null, 2025, null::int, 0.76::numeric, 0.12::numeric, 1.4::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/S', null, 2026, null::int, 0.76::numeric, 0::numeric, 1.66::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/S', null, 2027, null::int, 0.76::numeric, 0::numeric, 1.86::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'G/S', null, 2028, null::int, 0.76::numeric, 0::numeric, 2.03::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/E', null, 2025, null::int, 1.6::numeric, 0.96::numeric, 2.24::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/E', null, 2026, null::int, 1.6::numeric, 0.7::numeric, 2.5::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/E', null, 2027, null::int, 1.6::numeric, 0.49::numeric, 2.71::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/E', null, 2028, null::int, 1.6::numeric, 0.32::numeric, 2.88::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/W', null, 2025, null::int, 0.29::numeric, 0::numeric, 0.93::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/W', null, 2026, null::int, 0.29::numeric, 0::numeric, 1.19::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/W', null, 2027, null::int, 0.29::numeric, 0::numeric, 1.39::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'H/W', null, 2028, null::int, 0.29::numeric, 0::numeric, 1.56::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/E', null, 2025, null::int, 0.17::numeric, 0::numeric, 0.81::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/E', null, 2026, null::int, 0.17::numeric, 0::numeric, 1.08::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/E', null, 2027, null::int, 0.17::numeric, 0::numeric, 1.28::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/E', null, 2028, null::int, 0.17::numeric, 0::numeric, 1.45::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/W', null, 2025, null::int, 0.22::numeric, 0::numeric, 0.86::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/W', null, 2026, null::int, 0.22::numeric, 0::numeric, 1.12::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/W', null, 2027, null::int, 0.22::numeric, 0::numeric, 1.33::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'K/W', null, 2028, null::int, 0.22::numeric, 0::numeric, 1.5::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'L', null, 2025, null::int, 0.55::numeric, 0::numeric, 1.19::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'L', null, 2026, null::int, 0.55::numeric, 0::numeric, 1.45::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'L', null, 2027, null::int, 0.55::numeric, 0::numeric, 1.66::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'L', null, 2028, null::int, 0.55::numeric, 0::numeric, 1.83::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/E', null, 2025, null::int, 0.49::numeric, 0::numeric, 1.13::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/E', null, 2026, null::int, 0.49::numeric, 0::numeric, 1.39::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/E', null, 2027, null::int, 0.49::numeric, 0::numeric, 1.59::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/E', null, 2028, null::int, 0.49::numeric, 0::numeric, 1.76::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/W', null, 2025, null::int, 0.41::numeric, 0::numeric, 1.05::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/W', null, 2026, null::int, 0.41::numeric, 0::numeric, 1.31::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/W', null, 2027, null::int, 0.41::numeric, 0::numeric, 1.51::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'M/W', null, 2028, null::int, 0.41::numeric, 0::numeric, 1.68::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'N', null, 2025, null::int, 0.35::numeric, 0::numeric, 0.99::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'N', null, 2026, null::int, 0.35::numeric, 0::numeric, 1.25::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'N', null, 2027, null::int, 0.35::numeric, 0::numeric, 1.46::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'N', null, 2028, null::int, 0.35::numeric, 0::numeric, 1.63::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/N', null, 2025, null::int, 0.09::numeric, 0::numeric, 0.73::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/N', null, 2026, null::int, 0.09::numeric, 0::numeric, 0.99::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/N', null, 2027, null::int, 0.09::numeric, 0::numeric, 1.19::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/N', null, 2028, null::int, 0.09::numeric, 0::numeric, 1.36::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/S', null, 2025, null::int, 0.24::numeric, 0::numeric, 0.88::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/S', null, 2026, null::int, 0.24::numeric, 0::numeric, 1.14::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/S', null, 2027, null::int, 0.24::numeric, 0::numeric, 1.34::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'P/S', null, 2028, null::int, 0.24::numeric, 0::numeric, 1.51::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/C', null, 2025, null::int, 0.98::numeric, 0.34::numeric, 1.62::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/C', null, 2026, null::int, 0.98::numeric, 0.08::numeric, 1.89::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/C', null, 2027, null::int, 0.98::numeric, 0::numeric, 2.09::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/C', null, 2028, null::int, 0.98::numeric, 0::numeric, 2.26::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/N', null, 2025, null::int, 0.16::numeric, 0::numeric, 0.8::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/N', null, 2026, null::int, 0.16::numeric, 0::numeric, 1.06::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/N', null, 2027, null::int, 0.16::numeric, 0::numeric, 1.26::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/N', null, 2028, null::int, 0.16::numeric, 0::numeric, 1.43::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/S', null, 2025, null::int, 0.35::numeric, 0::numeric, 0.99::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/S', null, 2026, null::int, 0.35::numeric, 0::numeric, 1.25::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/S', null, 2027, null::int, 0.35::numeric, 0::numeric, 1.45::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'R/S', null, 2028, null::int, 0.35::numeric, 0::numeric, 1.62::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'S', null, 2025, null::int, 0.1::numeric, 0::numeric, 0.74::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'S', null, 2026, null::int, 0.1::numeric, 0::numeric, 1.0::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'S', null, 2027, null::int, 0.1::numeric, 0::numeric, 1.2::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'S', null, 2028, null::int, 0.1::numeric, 0::numeric, 1.37::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'T', null, 2025, null::int, 0.66::numeric, 0.02::numeric, 1.3::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'T', null, 2026, null::int, 0.66::numeric, 0::numeric, 1.57::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'T', null, 2027, null::int, 0.66::numeric, 0::numeric, 1.77::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', 'T', null, 2028, null::int, 0.66::numeric, 0::numeric, 1.94::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', null, null, 2025, null::int, 0.51::numeric, 0::numeric, 1.15::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', null, null, 2026, null::int, 0.51::numeric, 0::numeric, 1.42::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', null, null, 2027, null::int, 0.51::numeric, 0::numeric, 1.62::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_unfit_samples_pct', null, null, 2028, null::int, 0.51::numeric, 0::numeric, 1.79::numeric, 'mean3', 'unfit'),
+      ('water-forecast', 'water_yield_fy', null, null, 2025, null::int, 4435::numeric, 4353::numeric, 4516::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_yield_fy', null, null, 2026, null::int, 4435::numeric, 4319::numeric, 4550::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_yield_fy', null, null, 2027, null::int, 4435::numeric, 4293::numeric, 4576::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_yield_fy', null, null, 2028, null::int, 4435::numeric, 4271::numeric, 4598::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_supply_fy', null, null, 2025, null::int, 3948::numeric, 3875::numeric, 4020::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_supply_fy', null, null, 2026, null::int, 3948::numeric, 3845::numeric, 4051::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_supply_fy', null, null, 2027, null::int, 3948::numeric, 3822::numeric, 4074::numeric, 'mean3', 'city_water_fy'),
+      ('water-forecast', 'water_supply_fy', null, null, 2028, null::int, 3948::numeric, 3802::numeric, 4093::numeric, 'mean3', 'city_water_fy')
     ) as v(model_id, metric, code, category, year, month, value, lower, upper, method, family)
     left join city_zones z on z.organization_id = p_org and z.code = v.code;
 
@@ -5035,3 +5400,1499 @@ create policy "documents: staff delete within own organization" on storage.objec
     and (storage.foldername(name))[1] = (select app.org_id())::text
     and (select app.role()) in ('city_admin', 'dept_officer')
   );
+
+-- ============================================================
+-- 0016_three_year_forecasts.sql
+-- ============================================================
+-- CivicOS 0016: forecasts for the next three years.
+-- The models (0009, regenerated) now forecast complaints, waste and monthly air quality for 2026, 2027 and 2028,
+-- and water (unfit drinking-water samples; water drawn and supplied) for each year from 2025 to 2028, since the
+-- latest published water figures are for 2024. These read functions return every forecast year, nearest first.
+-- Safe to run again: everything here is "create or replace", and the last statement reloads the models.
+
+-- ---------------------------------------------------------------------------
+-- Analytics: model cards, ward groups, and every forecast year for one complaint series.
+-- 'forecast' (the nearest year) is kept for older callers.
+-- ---------------------------------------------------------------------------
+create or replace function public.ml_data(p_zone uuid default null, p_issue text default null)
+returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with fc as (
+    select f.* from ml_forecasts f
+     where f.metric = 'complaints_registered' and f.zone_id is not distinct from p_zone and f.category is not distinct from p_issue
+  )
+  select jsonb_build_object(
+    'models', coalesce((select jsonb_object_agg(kind, to_jsonb(m) - 'organization_id') from ml_models m
+                          where m.id in ('ward-groups-2025', 'complaints-forecast-2026')), '{}'::jsonb),
+    'wards', coalesce((
+      select jsonb_agg(jsonb_build_object('code', z.code, 'name', z.name, 'cluster', c.cluster,
+                                          'features', c.features, 'z', c.z) order by c.cluster, z.code)
+        from ml_ward_clusters c join city_zones z on z.id = c.zone_id), '[]'::jsonb),
+    'zone', (select jsonb_build_object('id', id, 'code', code, 'name', name) from city_zones where id = p_zone),
+    'issue', p_issue,
+    'history', coalesce((
+      select jsonb_agg(jsonb_build_object('year', year, 'value', value) order by year)
+        from civic_indicators
+       where metric = 'complaints_registered' and zone_id is not distinct from p_zone
+         and category is not distinct from p_issue), '[]'::jsonb),
+    'forecast', (select to_jsonb(f) - 'organization_id' - 'id' - 'zone_id' from fc f order by f.year limit 1),
+    'forecasts', coalesce((select jsonb_agg(to_jsonb(f) - 'organization_id' - 'id' - 'zone_id' order by f.year) from fc f), '[]'::jsonb),
+    'ward_forecasts', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'code', z.code, 'name', z.name, 'last', l.value, 'last_year', l.year,
+               'years', (select jsonb_agg(jsonb_build_object('year', f.year, 'value', f.value, 'lower', f.lower, 'upper', f.upper) order by f.year)
+                           from ml_forecasts f
+                          where f.zone_id = z.id and f.metric = 'complaints_registered' and f.category is not distinct from p_issue))
+             order by z.code)
+        from city_zones z
+        left join lateral (select ci.value, ci.year from civic_indicators ci
+                            where ci.zone_id = z.id and ci.metric = 'complaints_registered' and ci.category is not distinct from p_issue
+                              and ci.month is null order by ci.year desc limit 1) l on true
+       where exists (select 1 from ml_forecasts f
+                      where f.zone_id = z.id and f.metric = 'complaints_registered' and f.category is not distinct from p_issue)), '[]'::jsonb),
+    'issues_with_forecasts', coalesce((
+      select jsonb_agg(distinct category order by category) from ml_forecasts where metric = 'complaints_registered' and category is not null and zone_id is null), '[]'::jsonb),
+    'ward_issues', coalesce((
+      select jsonb_agg(distinct category order by category) from ml_forecasts where metric = 'complaints_registered' and category is not null and zone_id is not null), '[]'::jsonb)
+  )
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Air-quality, waste and water forecasts for the Analytics and Water pages. p_zone narrows the waste and
+-- unfit-water series to one ward; air quality and the water balance are city-wide only.
+-- waste.forecast (the nearest year) is kept for older callers.
+-- ---------------------------------------------------------------------------
+create or replace function public.forecast_extras(p_zone uuid default null)
+returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'zone', (select jsonb_build_object('id', id, 'code', code, 'name', name) from city_zones where id = p_zone),
+    'aqi', jsonb_build_object(
+      'model', (select to_jsonb(m) - 'organization_id' from ml_models m where m.id = 'aqi-forecast-2026'),
+      'history', coalesce((
+        select jsonb_agg(jsonb_build_object('year', year, 'month', month, 'value', value) order by year, month)
+          from civic_indicators where metric = 'aqi_monthly_avg' and zone_id is null and month is not null), '[]'::jsonb),
+      'forecast', coalesce((
+        select jsonb_agg(jsonb_build_object('year', year, 'month', month, 'value', value, 'lower', lower, 'upper', upper, 'method', method) order by year, month)
+          from ml_forecasts where metric = 'aqi_monthly_avg'), '[]'::jsonb),
+      'source', (select jsonb_build_object('publisher', s.publisher, 'table', s.table_ref, 'page', s.page)
+                   from civic_indicators ci join data_sources s on s.organization_id = ci.organization_id and s.id = ci.source_id
+                  where ci.metric = 'aqi_monthly_avg' limit 1)),
+    'waste', jsonb_build_object(
+      'model', (select to_jsonb(m) - 'organization_id' from ml_models m where m.id = 'waste-forecast-2026'),
+      'history', coalesce((
+        select jsonb_agg(jsonb_build_object('year', year, 'value', value) order by year)
+          from civic_indicators where metric = 'waste_tonnes_per_day' and zone_id is not distinct from p_zone
+           and category is null and month is null), '[]'::jsonb),
+      'forecast', (
+        select jsonb_build_object('year', year, 'value', value, 'lower', lower, 'upper', upper, 'method', method, 'family', family, 'category', null)
+          from ml_forecasts where metric = 'waste_tonnes_per_day' and zone_id is not distinct from p_zone order by year limit 1),
+      'forecasts', coalesce((
+        select jsonb_agg(jsonb_build_object('year', year, 'value', value, 'lower', lower, 'upper', upper, 'method', method, 'family', family, 'category', null) order by year)
+          from ml_forecasts where metric = 'waste_tonnes_per_day' and zone_id is not distinct from p_zone), '[]'::jsonb),
+      'ward_forecasts', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'code', z.code, 'name', z.name, 'last', l.value, 'last_year', l.year,
+                 'years', (select jsonb_agg(jsonb_build_object('year', f.year, 'value', f.value, 'lower', f.lower, 'upper', f.upper) order by f.year)
+                             from ml_forecasts f where f.zone_id = z.id and f.metric = 'waste_tonnes_per_day'))
+               order by z.code)
+          from city_zones z
+          left join lateral (select ci.value, ci.year from civic_indicators ci
+                              where ci.zone_id = z.id and ci.metric = 'waste_tonnes_per_day' and ci.category is null and ci.month is null
+                              order by ci.year desc limit 1) l on true
+         where exists (select 1 from ml_forecasts f where f.zone_id = z.id and f.metric = 'waste_tonnes_per_day')), '[]'::jsonb),
+      'source', (select jsonb_build_object('publisher', s.publisher, 'table', s.table_ref, 'page', s.page)
+                   from civic_indicators ci join data_sources s on s.organization_id = ci.organization_id and s.id = ci.source_id
+                  where ci.metric = 'waste_tonnes_per_day' and ci.zone_id is not null limit 1)),
+    'water', jsonb_build_object(
+      'model', (select to_jsonb(m) - 'organization_id' from ml_models m where m.id = 'water-forecast'),
+      'unfit', jsonb_build_object(
+        'history', coalesce((
+          select jsonb_agg(jsonb_build_object('year', year, 'value', value) order by year)
+            from civic_indicators where metric = 'water_unfit_samples_pct' and zone_id is not distinct from p_zone and month is null), '[]'::jsonb),
+        'forecasts', coalesce((
+          select jsonb_agg(jsonb_build_object('year', year, 'value', value, 'lower', lower, 'upper', upper, 'method', method) order by year)
+            from ml_forecasts where metric = 'water_unfit_samples_pct' and zone_id is not distinct from p_zone), '[]'::jsonb),
+        'wards', coalesce((
+          select jsonb_agg(jsonb_build_object(
+                   'code', z.code, 'name', z.name, 'last', l.value, 'last_year', l.year,
+                   'years', (select jsonb_agg(jsonb_build_object('year', f.year, 'value', f.value, 'lower', f.lower, 'upper', f.upper) order by f.year)
+                               from ml_forecasts f where f.zone_id = z.id and f.metric = 'water_unfit_samples_pct'))
+                 order by z.code)
+            from city_zones z
+            left join lateral (select ci.value, ci.year from civic_indicators ci
+                                where ci.zone_id = z.id and ci.metric = 'water_unfit_samples_pct' and ci.month is null
+                                order by ci.year desc limit 1) l on true
+           where exists (select 1 from ml_forecasts f where f.zone_id = z.id and f.metric = 'water_unfit_samples_pct')), '[]'::jsonb)),
+      'balance', jsonb_build_object(
+        'history', coalesce((
+          select jsonb_agg(jsonb_build_object('year', year, 'metric', metric, 'value', value) order by year, metric)
+            from civic_indicators where metric in ('water_yield_fy', 'water_supply_fy') and zone_id is null and month is null), '[]'::jsonb),
+        'forecasts', coalesce((
+          select jsonb_agg(jsonb_build_object('year', year, 'metric', metric, 'value', value, 'lower', lower, 'upper', upper, 'method', method) order by year, metric)
+            from ml_forecasts where metric in ('water_yield_fy', 'water_supply_fy') and zone_id is null), '[]'::jsonb)))
+  )
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Assistant facts (as in 0012), with forecasts for 2026-2028 and water.
+-- A forecast question gets the year it names; otherwise the next year (the first forecast year of the
+-- complaint model); a question about several years ("next three years", "coming years") gets them all.
+-- ---------------------------------------------------------------------------
+create or replace function public.assistant_facts(p_question text)
+returns jsonb
+language plpgsql stable set search_path = public as $$
+declare
+  q        text := lower(coalesce(p_question, ''));
+  v_wards  uuid[];
+  v_year   int := (select (regexp_match(q, '\m(20[0-3][0-9])\M'))[1]::int);
+  v_future boolean := q ~ '(forecast|predict|projection|next year|next \w+ years|coming years|future|expect|will|202[6-9])';
+  v_span   boolean := q ~ '(next (two|three|four|few|2|3|4) years|coming years|years ahead|over the next|three years|3 years)';
+  v_next   int := (select min(year) from ml_forecasts where metric = 'complaints_registered');
+  v_out    jsonb;
+begin
+  -- wards named as "ward K/W", "K/W ward" or "wards A and B"
+  select array_agg(z.id) into v_wards
+    from city_zones z
+   where q ~ ('(\mward[s]?\s+([a-z/]+\s*(,|and|&)\s*)*' || lower(replace(z.code, '/', '\/')) || '\M)|(\m' || lower(replace(z.code, '/', '\/')) || '\s+ward\M)');
+
+  with topics(metric, category, label, unit, pattern, forecastable, fmetric) as (values
+    ('complaints_registered', null, 'Complaints registered', '', '(complaint|grievance|issue)', true, 'complaints_registered'),
+    ('complaints_closed', null, 'Complaints closed', '', '(closed|closure|resolved|unresolved|pending)', false, null),
+    ('avg_days_to_close', null, 'Average days to close a complaint', 'days', '(days|slow|fast|time|resolution|resolve|delay)', false, null),
+    ('complaints_registered', 'Solid Waste Management (SWM)', 'Solid-waste complaints registered', '', '(waste|garbage|swm)', true, 'complaints_registered'),
+    ('complaints_registered', 'Drainage', 'Drainage complaints registered', '', '(drain|flood|waterlog)', true, 'complaints_registered'),
+    ('waste_tonnes_per_day', null, 'Waste lifted', 'tonnes/day', '(waste|garbage|tonn|swm)', true, 'waste_tonnes_per_day'),
+    ('waste_per_capita', null, 'Waste per person', 'kg/day', '(waste|garbage|per person|per capita)', false, null),
+    ('water_supply_hours', null, 'Water supply', 'hours/day', '(water|supply)', false, null),
+    ('water_unfit_samples_pct', null, 'Drinking-water samples found unfit', '%', '(water|unfit|contamin|drinking)', true, 'water_unfit_samples_pct'),
+    ('water_supply_mld', null, 'Water supplied to the city', 'MLD', '(water|supply|demand|shortfall|shortage)', true, 'water_supply_fy'),
+    ('water_demand_mld', null, 'Water demand', 'MLD', '(water|demand|shortfall|shortage)', false, null),
+    ('water_gap_mld', null, 'Water supply shortfall', 'MLD', '(water|shortfall|shortage|gap|deficit)', false, null),
+    ('bwg_not_processing_on_site_pct', null, 'Bulk waste generators not processing on site', '%', '(bulk|societ|compost|processing)', false, null)
+  ),
+  wanted as (select * from topics t where q ~ t.pattern),
+  yr as (       -- the asked year if published for the metric, else the latest
+    select w.metric, w.category,
+           coalesce((select max(year) from civic_indicators ci where ci.metric = w.metric and ci.category is not distinct from w.category and ci.year = v_year),
+                    (select max(year) from civic_indicators ci where ci.metric = w.metric and ci.category is not distinct from w.category)) as y
+      from wanted w
+  ),
+  base as (
+    select ci.value, ci.year, ci.zone_id, z.code, w.label, w.unit, w.metric, w.category, s.publisher, s.table_ref, s.page,
+           rank() over (partition by w.metric, w.category order by ci.value desc) as hi,
+           rank() over (partition by w.metric, w.category order by ci.value asc)  as lo
+      from wanted w
+      join yr on yr.metric = w.metric and yr.category is not distinct from w.category
+      join civic_indicators ci on ci.metric = w.metric and ci.category is not distinct from w.category and ci.year = yr.y and ci.month is null
+      left join city_zones z on z.id = ci.zone_id
+      left join data_sources s on s.organization_id = ci.organization_id and s.id = ci.source_id
+  ),
+  picked as (
+    select *, 1 as ord from base where zone_id is null                                         -- city figure
+    union all
+    select *, 2 from base where zone_id = any (coalesce(v_wards, '{}'))                        -- wards that were named
+    union all
+    select *, 3 from base where zone_id is not null and v_wards is null and (hi <= 3 or lo <= 3)  -- extremes when no ward is named
+  ),
+  facts as (
+    select distinct on (metric, category, zone_id)
+           format('%s, %s, %s: %s%s', label, coalesce('Ward ' || code, 'Mumbai'), year,
+                  rtrim(to_char(value, 'FM99,99,99,990.99'), '.'), case when unit = '' then '' else ' ' || unit end) as text,
+           format('%s, %s, p. %s', publisher, table_ref, page) as source, ord, metric, category, value, zone_id
+      from picked
+  ),
+  fyears as (   -- which forecast years to show, per forecast metric
+    select distinct w.fmetric,
+           case when v_span and v_year is null then null       -- null = every year
+                else coalesce((select max(x.year) from ml_forecasts x where x.metric = w.fmetric and x.year = v_year),
+                              greatest(v_next, (select min(x.year) from ml_forecasts x where x.metric = w.fmetric))) end as y
+      from wanted w where w.forecastable
+  ),
+  forecasts as (
+    select format('Forecast of %s, %s, %s: %s%s (80%% range %s to %s). A model estimate, not a published figure.',
+                  lower(w.label), coalesce('Ward ' || z.code, 'Mumbai'), f.year,
+                  rtrim(to_char(f.value, 'FM99,99,99,990.99'), '.'), case when w.unit = '' then '' else ' ' || w.unit end,
+                  rtrim(to_char(f.lower, 'FM99,99,99,990.99'), '.'), rtrim(to_char(f.upper, 'FM99,99,99,990.99'), '.')) as text,
+           case when f.metric = 'waste_tonnes_per_day' then 'CivicOS waste forecast model'
+                when f.metric like 'water%' then 'CivicOS water forecast model'
+                else 'CivicOS complaint forecast model' end as source, 4 as ord, f.year as k
+      from wanted w
+      join fyears fy on fy.fmetric = w.fmetric
+      join ml_forecasts f on f.metric = w.fmetric and f.category is not distinct from w.category and f.month is null
+      left join city_zones z on z.id = f.zone_id
+     where w.forecastable and v_future
+       and (fy.y is null or f.year = fy.y)
+       and (f.zone_id is null or f.zone_id = any (coalesce(v_wards, '{}')))
+  ),
+  air as (       -- monthly air-quality forecast, asked about air and the future
+    select format('Forecast average AQI, Mumbai, %s %s: %s (80%% range %s to %s). A model estimate, not a published figure.',
+                  to_char(make_date(f.year, f.month, 1), 'FMMonth'), f.year, f.value::int, f.lower::int, f.upper::int) as text,
+           'CivicOS air-quality forecast model' as source, 4 as ord, f.year * 100 + f.month as k
+      from ml_forecasts f
+     where f.metric = 'aqi_monthly_avg' and q ~ '(air|aqi|pollut|smog)' and v_future
+       and (    (v_span and v_year is null)
+             or f.year = coalesce((select max(x.year) from ml_forecasts x where x.metric = 'aqi_monthly_avg' and x.year = v_year), v_next))
+  ),
+  health as (
+    select format('City Health Index (prototype), %s, %s: %s out of 100', coalesce('Ward ' || z.code, 'Mumbai'),
+                  extract(year from h.snapshot_date)::int, h.score) as text,
+           'CivicOS prototype index computed from published figures' as source, 5 as ord
+      from health_index_snapshots h left join city_zones z on z.id = h.zone_id
+     where q ~ '(health|index|score|overall)' and (h.zone_id is null or h.zone_id = any (coalesce(v_wards, '{}')))
+  ),
+  allf as (
+    select text, source, ord, 0 as k from facts
+    union all select text, source, ord, k from forecasts
+    union all select text, source, ord, k from air
+    union all select text, source, ord, 0 from health
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('text', text, 'source', source) order by ord, k, text), '[]'::jsonb) into v_out
+    from (select * from allf order by ord, k, text limit 24) t;
+  return v_out;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Recommendations (as in 0013). Only change: R7 (poor air-quality months) looks at the next forecast year,
+-- not every forecast year, so it raises one recommendation rather than three near-identical ones.
+-- ---------------------------------------------------------------------------
+create or replace function app.generate_recommendations(p_org uuid) returns int
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_n int := 0;
+  v_y int;
+begin
+  create temp table if not exists _rec (
+    key text, rule text, module text, zone_id uuid, problem text, evidence jsonb, prediction text,
+    action text, priority text, basis text) on commit drop;
+  truncate _rec;
+
+  -- R1: wards that take much longer than the city to close complaints
+  select max(year) into v_y from civic_indicators where organization_id = p_org and metric = 'avg_days_to_close' and zone_id is not null and category is null;
+  insert into _rec
+  select 'slow_closure:' || z.code, 'slow_closure', 'complaints', z.id,
+         format('Ward %s takes %s days on average to close a complaint, against %s for the city (%s).', z.code, w.value, c.value, v_y),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Ward %s average days to close, %s', z.code, v_y), 'value', w.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page)),
+           jsonb_build_object('label', format('City average days to close, %s', v_y), 'value', c.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page))),
+         null,
+         format('Review how complaints are routed and escalated in Ward %s, starting with the issues that take longest.', z.code),
+         case when w.value >= 2 * c.value then 'high' else 'medium' end,
+         'Rule: ward average is at least 1.5 times the city average (high priority at 2 times).'
+    from civic_indicators w
+    join city_zones z on z.id = w.zone_id
+    join civic_indicators c on c.organization_id = p_org and c.metric = 'avg_days_to_close' and c.zone_id is null and c.category is null and c.year = v_y
+    left join data_sources s on s.organization_id = p_org and s.id = w.source_id
+   where w.organization_id = p_org and w.metric = 'avg_days_to_close' and w.category is null and w.year = v_y
+     and w.value >= 1.5 * c.value;
+
+  -- R2: wards with very short water supply
+  select max(year) into v_y from civic_indicators where organization_id = p_org and metric = 'water_supply_hours' and zone_id is not null;
+  insert into _rec
+  select 'short_water:' || z.code, 'short_water', 'water', z.id,
+         format('Ward %s receives water for %s hours a day on average, against %s for the city (%s).', z.code, w.value, c.value, v_y),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Ward %s supply hours per day, %s', z.code, v_y), 'value', w.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page)),
+           jsonb_build_object('label', format('City average supply hours per day, %s', v_y), 'value', c.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page))),
+         null,
+         format('Examine supply timings and zone-level distribution in Ward %s; prioritise zones receiving two hours or less.', z.code),
+         case when w.value < 2 then 'high' else 'medium' end,
+         'Rule: ward average is under 3 hours a day (high priority under 2 hours).'
+    from civic_indicators w
+    join city_zones z on z.id = w.zone_id
+    join civic_indicators c on c.organization_id = p_org and c.metric = 'water_supply_hours' and c.zone_id is null and c.year = v_y
+    left join data_sources s on s.organization_id = p_org and s.id = w.source_id
+   where w.organization_id = p_org and w.metric = 'water_supply_hours' and w.year = v_y and w.value < 3;
+
+  -- R3: wards where many drinking-water samples fail
+  select max(year) into v_y from civic_indicators where organization_id = p_org and metric = 'water_unfit_samples_pct' and zone_id is not null;
+  insert into _rec
+  select 'unfit_water:' || z.code, 'unfit_water', 'water', z.id,
+         format('%s%% of drinking-water samples in Ward %s were found unfit in %s, against %s%% for the city.', w.value, z.code, v_y, c.value),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Ward %s unfit samples, %s', z.code, v_y), 'value', w.value || '%', 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page)),
+           jsonb_build_object('label', format('City unfit samples, %s', v_y), 'value', c.value || '%', 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page))),
+         null,
+         format('Increase sampling in Ward %s and inspect for contamination sources such as leaking or cross-connected lines.', z.code),
+         case when w.value >= 2 then 'high' else 'medium' end,
+         'Rule: at least 1% of samples unfit (high priority at 2%).'
+    from civic_indicators w
+    join city_zones z on z.id = w.zone_id
+    join civic_indicators c on c.organization_id = p_org and c.metric = 'water_unfit_samples_pct' and c.zone_id is null and c.year = v_y
+    left join data_sources s on s.organization_id = p_org and s.id = w.source_id
+   where w.organization_id = p_org and w.metric = 'water_unfit_samples_pct' and w.year = v_y and w.value >= 1;
+
+  -- R4: wards where the forecast points to a clear rise in complaints
+  insert into _rec
+  select 'forecast_rise:' || z.code, 'forecast_rise', 'complaints', z.id,
+         format('Complaints in Ward %s are forecast to rise from %s in %s to about %s in %s.', z.code,
+                to_char(l.value, 'FM99,99,990'), f.year - 1, to_char(f.value, 'FM99,99,990'), f.year),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Ward %s complaints registered, %s', z.code, f.year - 1), 'value', l.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page)),
+           jsonb_build_object('label', format('Forecast for %s', f.year), 'value', f.value, 'source', 'CivicOS complaint forecast model')),
+         format('Forecast %s: %s (80%% range %s to %s).', f.year, to_char(f.value, 'FM99,99,990'), to_char(f.lower, 'FM99,99,990'), to_char(f.upper, 'FM99,99,990')),
+         format('Plan complaint-handling capacity in Ward %s for a higher load next year.', z.code),
+         case when f.lower > l.value then 'high' else 'medium' end,
+         'Rule: forecast is at least 10% above the last published year (high priority when even the low end of the range is above it).'
+    from ml_forecasts f
+    join city_zones z on z.id = f.zone_id
+    join civic_indicators l on l.zone_id = f.zone_id and l.metric = 'complaints_registered' and l.category is null and l.year = f.year - 1
+    left join data_sources s on s.organization_id = p_org and s.id = l.source_id
+   where f.organization_id = p_org and f.metric = 'complaints_registered' and f.category is null and f.value >= 1.10 * l.value;
+
+  -- R5: wards where almost no bulk waste generator processes waste on site
+  insert into _rec
+  select 'bwg:' || z.code, 'bwg', 'waste', z.id,
+         format('%s%% of the %s bulk waste generator societies in Ward %s do not process waste on site (%s).', w.value, n.value, z.code, w.year),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Ward %s societies not processing on site, %s', z.code, w.year), 'value', w.value || '%', 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page)),
+           jsonb_build_object('label', 'Bulk waste generator societies in the ward', 'value', n.value, 'source', format('%s, %s, p. %s', s.publisher, s.table_ref, s.page))),
+         null,
+         format('Follow up with bulk waste generators in Ward %s on on-site wet-waste processing.', z.code),
+         'medium',
+         'Rule: at least 95% of societies not processing on site, in wards with 50 or more such societies.'
+    from civic_indicators w
+    join city_zones z on z.id = w.zone_id
+    join civic_indicators n on n.zone_id = w.zone_id and n.metric = 'bwg_societies' and n.year = w.year
+    left join data_sources s on s.organization_id = p_org and s.id = w.source_id
+   where w.organization_id = p_org and w.metric = 'bwg_not_processing_on_site_pct' and w.value >= 95 and n.value >= 50;
+
+  -- R6: live CivicOS complaints open longer than the typical time to close
+  insert into _rec
+  select 'overdue:' || coalesce(z.code, 'none'), 'overdue', 'complaints', z.id,
+         format('%s complaint%s submitted through CivicOS in %s %s been open longer than the typical time to close.',
+                count(*), case when count(*) = 1 then '' else 's' end, coalesce('Ward ' || z.code, 'an unspecified ward'),
+                case when count(*) = 1 then 'has' else 'have' end),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Overdue complaints', 'value', string_agg(c.reference, ', ' order by c.created_at), 'source', 'CivicOS complaints'),
+           jsonb_build_object('label', 'Oldest', 'value', to_char(min(c.created_at), 'DD Mon YYYY'), 'source', 'CivicOS complaints')),
+         null,
+         'Review and reassign or escalate these complaints.',
+         'high',
+         'Rule: an open complaint is older than the published average days to close for its ward and issue.'
+    from complaints c
+    left join city_zones z on z.id = c.zone_id
+   where c.organization_id = p_org and c.resolved_at is null and c.expected_days is not null
+     and c.created_at < now() - make_interval(days => ceil(c.expected_days)::int)
+   group by z.id, z.code;
+
+  -- R7: months of next year when air quality is forecast to be poor for the city (AQI above 100)
+  insert into _rec
+  select 'aqi_season:' || f.year, 'aqi_season', 'environment', null,
+         format('Average AQI is forecast above 100 in %s of %s, peaking at about %s in %s.',
+                string_agg(to_char(make_date(f.year, f.month, 1), 'FMMon'), ', ' order by f.month), f.year,
+                max(f.value)::int, (array_agg(to_char(make_date(f.year, f.month, 1), 'FMMonth') order by f.value desc))[1]),
+         jsonb_build_array(
+           jsonb_build_object('label', format('Months above AQI 100 in %s', f.year - 1),
+                              'value', (select count(*) from civic_indicators a where a.organization_id = p_org and a.metric = 'aqi_monthly_avg'
+                                          and a.zone_id is null and a.year = f.year - 1 and a.value > 100),
+                              'source', (select format('%s, %s, p. %s', publisher, table_ref, page) from data_sources where organization_id = p_org and id = 'p26-t29')),
+           jsonb_build_object('label', format('Forecast peak, %s', f.year), 'value', max(f.value), 'source', 'CivicOS air-quality forecast model')),
+         format('Forecast %s, months above 100: %s.', f.year,
+                string_agg(format('%s %s (80%% range %s to %s)', to_char(make_date(f.year, f.month, 1), 'FMMon'), f.value::int, f.lower::int, f.upper::int), ', ' order by f.month)),
+         'Schedule dust control at construction sites, road sweeping and waste-burning checks for these months, and issue public advisories before they start.',
+         case when max(f.lower) > 100 then 'high' else 'medium' end,
+         'Rule: the monthly AQI forecast is above 100, the upper limit of the "Satisfactory" band (high priority when even the low end of the range is above it).'
+    from ml_forecasts f
+   where f.organization_id = p_org and f.metric = 'aqi_monthly_avg' and f.value > 100
+     and f.year = (select min(x.year) from ml_forecasts x where x.organization_id = p_org and x.metric = 'aqi_monthly_avg')
+   group by f.year;
+
+  insert into recommendations (organization_id, key, rule, module, zone_id, problem, evidence, prediction, action, priority, basis)
+  select p_org, key, rule, module, zone_id, problem, evidence, prediction, action, priority, basis from _rec
+  on conflict (organization_id, key) do update
+     set problem = excluded.problem, evidence = excluded.evidence, prediction = excluded.prediction,
+         action = excluded.action, priority = excluded.priority, basis = excluded.basis, generated_at = now();
+  get diagnostics v_n = row_count;
+
+  -- a rule that no longer fires closes its untouched recommendation
+  delete from recommendations r
+   where r.organization_id = p_org and r.status = 'open' and not exists (select 1 from _rec t where t.key = r.key);
+  return v_n;
+end $$;
+revoke all on function app.generate_recommendations(uuid) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Reload the models (and the recommendations built on them) for workspaces that already hold the Mumbai data.
+-- On a new project there are none yet, so this does nothing.
+-- ---------------------------------------------------------------------------
+select app.load_mumbai_models(o.id), app.generate_recommendations(o.id)
+  from public.organizations o
+ where exists (select 1 from public.cities c where c.organization_id = o.id and c.name = 'Mumbai');
+
+-- ============================================================
+-- 0017_rag_vectors.sql
+-- ============================================================
+-- CivicOS 0017: semantic retrieval for the assistant (RAG).
+-- The backend (apps/api) extracts and chunks each uploaded document, embeds every chunk and stores the vector here.
+-- Retrieval fuses vector similarity with the existing full-text match (reciprocal rank fusion), so exact terms
+-- (a rule number, a ward code) and paraphrases both find the right passage.
+-- Every function runs as the caller (SECURITY INVOKER) and the backend connects as the signed-in user, so RLS keeps
+-- each municipality's documents, and staff-only documents, out of everyone else's results.
+
+-- ---------------------------------------------------------------------------
+-- Tables
+-- ---------------------------------------------------------------------------
+create table public.document_embeddings (
+  chunk_id        bigint primary key references public.document_chunks(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  document_id     uuid not null references public.documents(id) on delete cascade,
+  model           text not null,                         -- e.g. gemini-embedding-001@768; a model change means re-embedding
+  embedding       vector(768) not null,
+  created_at      timestamptz not null default now()
+);
+create index document_embeddings_doc_idx on public.document_embeddings (document_id);
+create index document_embeddings_hnsw on public.document_embeddings using hnsw (embedding vector_cosine_ops);
+
+alter table public.document_chunks add column if not exists section text;         -- nearest heading above the chunk
+alter table public.documents add column if not exists embedding_model text;
+alter table public.documents add column if not exists processed_at timestamptz;
+alter table public.retrieval_logs add column if not exists tools jsonb not null default '[]'::jsonb;  -- which tools answered
+
+grant select, insert, delete on public.document_embeddings to authenticated;
+grant all on public.document_embeddings to service_role;
+revoke all on public.document_embeddings from anon;
+
+-- embeddings are visible exactly when their document is (the subquery runs under the caller's RLS)
+alter table public.document_embeddings enable row level security;
+create policy embeddings_read on public.document_embeddings for select to authenticated using (
+  organization_id = (select app.org_id()) and exists (select 1 from public.documents d where d.id = document_embeddings.document_id));
+create policy embeddings_insert on public.document_embeddings for insert to authenticated with check (
+  organization_id = (select app.org_id()) and (select app.role()) in ('city_admin', 'dept_officer')
+  and exists (select 1 from public.documents d where d.id = document_embeddings.document_id));
+create policy embeddings_delete on public.document_embeddings for delete to authenticated using (
+  organization_id = (select app.org_id()) and (select app.role()) in ('city_admin', 'dept_officer'));
+
+-- re-processing a document replaces its chunks
+create policy chunks_delete on public.document_chunks for delete to authenticated using (
+  organization_id = (select app.org_id()) and (select app.role()) in ('city_admin', 'dept_officer'));
+
+-- ---------------------------------------------------------------------------
+-- Hybrid retrieval. p_embedding null = keyword search only (no embedding provider configured).
+-- Vector hits below p_min_similarity are dropped unless the passage also matches the words of the question.
+-- ---------------------------------------------------------------------------
+create or replace function public.match_document_chunks(
+  p_query          text,
+  p_embedding      vector(768) default null,
+  p_limit          int default 8,
+  p_min_similarity float8 default 0,
+  p_category       text default null
+) returns jsonb
+language plpgsql stable set search_path = public, extensions as $$
+declare
+  v_terms text[] := tsvector_to_array(to_tsvector('english', coalesce(p_query, '')));
+  v_or    tsquery;
+  v_out   jsonb;
+begin
+  if coalesce(array_length(v_terms, 1), 0) > 0 then
+    v_or := to_tsquery('english', (select string_agg(quote_literal(t), ' | ') from unnest(v_terms) t));
+  end if;
+
+  with vec_raw as (
+    select e.chunk_id, e.embedding <=> p_embedding as distance
+      from document_embeddings e
+      join documents d on d.id = e.document_id and d.status = 'ready'
+     where p_embedding is not null and (p_category is null or d.category = p_category)
+     order by e.embedding <=> p_embedding
+     limit 40
+  ),
+  vec as (
+    select chunk_id, 1 - distance as similarity, row_number() over (order by distance) as rnk from vec_raw
+  ),
+  kw as (
+    select c.id as chunk_id, ts_rank_cd(c.tsv, v_or, 32) as krank,
+           row_number() over (order by ts_rank_cd(c.tsv, v_or, 32) desc) as rnk
+      from document_chunks c
+      join documents d on d.id = c.document_id and d.status = 'ready'
+     where v_or is not null and c.tsv @@ v_or and (p_category is null or d.category = p_category)
+     order by ts_rank_cd(c.tsv, v_or, 32) desc
+     limit 40
+  ),
+  fused as (     -- reciprocal rank fusion, k = 60
+    select coalesce(vec.chunk_id, kw.chunk_id) as chunk_id,
+           coalesce(1.0 / (60 + vec.rnk), 0) + coalesce(1.0 / (60 + kw.rnk), 0) as score,
+           vec.similarity, kw.krank
+      from vec full outer join kw on kw.chunk_id = vec.chunk_id
+  ),
+  top as (
+    select f.*
+      from fused f
+     where f.krank is not null or f.similarity >= p_min_similarity
+     order by f.score desc
+     limit least(greatest(p_limit, 1), 12)
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'chunk_id', c.id, 'document_id', d.id, 'title', d.title, 'category', d.category, 'source', d.source,
+           'version', d.version, 'department', dep.name, 'uploaded_at', d.created_at, 'access_level', d.access_level,
+           'page', c.page_number, 'section', c.section, 'content', c.content,
+           'excerpt', case when v_or is not null and c.tsv @@ v_or
+                           then ts_headline('english', c.content, v_or, 'MaxWords=45, MinWords=20, StartSel=«, StopSel=», MaxFragments=1')
+                           else left(c.content, 320) end,
+           'score', round(t.score::numeric, 5), 'similarity', round(t.similarity::numeric, 4), 'keyword_rank', round(t.krank::numeric, 4))
+         order by t.score desc), '[]'::jsonb)
+    into v_out
+    from top t
+    join document_chunks c on c.id = t.chunk_id
+    join documents d on d.id = c.document_id
+    left join departments dep on dep.id = d.department_id;
+  return v_out;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Assistant quota: checks the plan's monthly limit and records one question. Called once per question.
+-- ---------------------------------------------------------------------------
+create or replace function public.assistant_quota()
+returns jsonb
+language plpgsql set search_path = public as $$
+declare
+  v_org   uuid := app.org_id();
+  v_limit int  := app.plan_limit(v_org, 'ai_queries_per_month');
+  v_used  int  := app.usage_this_month(v_org, 'ai_query');
+begin
+  if v_org is null then raise exception 'Not signed in' using errcode = 'P0001'; end if;
+  if v_limit is not null and v_used >= v_limit then
+    return jsonb_build_object('allowed', false, 'limit', v_limit, 'used', v_used);
+  end if;
+  insert into usage_records (organization_id, user_id, metric) values (v_org, auth.uid(), 'ai_query');
+  return jsonb_build_object('allowed', true, 'limit', v_limit, 'used', v_used + 1);
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Save a question and its answer; now also records which tools the assistant used.
+-- ---------------------------------------------------------------------------
+drop function if exists public.assistant_save(uuid, text, text, jsonb, bigint[], int, text);
+create or replace function public.assistant_save(
+  p_conversation uuid, p_question text, p_answer text, p_citations jsonb, p_chunk_ids bigint[], p_fact_count int, p_mode text,
+  p_tools jsonb default '[]'::jsonb
+) returns uuid
+language plpgsql set search_path = public as $$
+declare
+  v_conv uuid := p_conversation;
+begin
+  if v_conv is null or not exists (select 1 from assistant_conversations where id = v_conv and user_id = auth.uid()) then
+    insert into assistant_conversations (organization_id, user_id, title)
+    values (app.org_id(), auth.uid(), left(p_question, 80)) returning id into v_conv;
+  end if;
+  insert into assistant_messages (organization_id, conversation_id, role, content) values (app.org_id(), v_conv, 'user', p_question);
+  insert into assistant_messages (organization_id, conversation_id, role, content, citations, mode)
+  values (app.org_id(), v_conv, 'assistant', p_answer, coalesce(p_citations, '[]'::jsonb), p_mode);
+  insert into retrieval_logs (organization_id, user_id, query, chunk_ids, fact_count, mode, tools)
+  values (app.org_id(), auth.uid(), p_question, coalesce(p_chunk_ids, '{}'), coalesce(p_fact_count, 0), p_mode, coalesce(p_tools, '[]'::jsonb));
+  return v_conv;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Live CivicOS complaints for the assistant, as the caller sees them (RLS: residents see only their own).
+-- ---------------------------------------------------------------------------
+create or replace function public.complaint_summary(p_ward text default null)
+returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with c as (
+    select c.status, cc.name as category, z.code as ward, c.created_at, c.resolved_at
+      from complaints c
+      left join complaint_categories cc on cc.id = c.category_id
+      left join city_zones z on z.id = c.zone_id
+     where p_ward is null or upper(z.code) = upper(p_ward)
+  )
+  select jsonb_build_object(
+    'ward', upper(p_ward),
+    'total', (select count(*) from c),
+    'open', (select count(*) from c where resolved_at is null),
+    'by_status', coalesce((select jsonb_object_agg(status, n) from (select status, count(*) n from c group by status) t), '{}'::jsonb),
+    'by_category', coalesce((select jsonb_object_agg(coalesce(category, 'Uncategorised'), n) from (select category, count(*) n from c group by category) t), '{}'::jsonb),
+    'open_by_ward', coalesce((select jsonb_object_agg(coalesce(ward, 'No ward'), n)
+                                from (select ward, count(*) n from c where resolved_at is null group by ward order by count(*) desc limit 10) t), '{}'::jsonb),
+    'oldest_open', (select min(created_at) from c where resolved_at is null))
+$$;
+
+do $$
+declare f text;
+begin
+  foreach f in array array[
+    'public.match_document_chunks(text, vector(768), int, float8, text)', 'public.assistant_quota()',
+    'public.assistant_save(uuid, text, text, jsonb, bigint[], int, text, jsonb)', 'public.complaint_summary(text)']
+  loop
+    execute format('revoke all on function %s from public, anon', f);
+    execute format('grant execute on function %s to authenticated', f);
+  end loop;
+end $$;
+
+-- ============================================================
+-- 0018_operations.sql
+-- ============================================================
+-- CivicOS 0018: water, waste and traffic operations (sensor-level modules)
+--
+-- Mumbai publishes no pipe-network, sensor, bin or traffic-detector readings. These tables hold either a city's own
+-- feeds, when it connects them, or the clearly labelled demonstration dataset generated by apps/api (every such row
+-- has is_synthetic = true, and the pages say "Demo data"). They never mix with the published figures in
+-- civic_indicators. Models (apps/api/app/ops) write their outputs here with the run that produced them.
+
+-- ---------------------------------------------------------------------------------------------- bookkeeping
+create table public.ops_datasets (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  kind            text not null check (kind in ('demo', 'connected')),
+  generated_at    timestamptz not null,
+  seed            int,
+  config          jsonb not null default '{}'::jsonb,
+  truth           jsonb not null default '{}'::jsonb,   -- demo only: injected faults, for scoring the detectors
+  created_by      uuid references public.users(id) on delete set null,
+  created_at      timestamptz not null default now()
+);
+
+create table public.model_runs (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  module          text not null check (module in ('water', 'waste', 'traffic', 'complaints')),
+  model           text not null,             -- water-anomaly, water-demand, water-pipe-risk, ...
+  method          text not null,
+  trained_at      timestamptz not null default now(),
+  metrics         jsonb not null default '{}'::jsonb,
+  params          jsonb not null default '{}'::jsonb,
+  is_demo         boolean not null default true
+);
+create index model_runs_org_idx on public.model_runs (organization_id, model, trained_at desc);
+
+-- background jobs (dataset builds, training, route planning), so the app can show progress
+create table public.ops_jobs (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  kind            text not null check (kind in ('demo', 'train', 'scheduled')),
+  status          text not null default 'queued' check (status in ('queued', 'running', 'done', 'failed')),
+  step            text,
+  result          jsonb,
+  error           text,
+  created_by      uuid references public.users(id) on delete set null,
+  created_at      timestamptz not null default now(),
+  finished_at     timestamptz
+);
+create index ops_jobs_org_idx on public.ops_jobs (organization_id, created_at desc);
+
+-- ------------------------------------------------------------------------------------------------------ water
+create table public.water_reservoirs (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  zone_id         uuid references public.city_zones(id) on delete set null,
+  code            text not null,
+  name            text not null,
+  capacity_ml     numeric not null,
+  geom            geometry(Point, 4326),
+  is_synthetic    boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.reservoir_readings (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  reservoir_id    uuid not null references public.water_reservoirs(id) on delete cascade,
+  ts              timestamptz not null,
+  level_pct       real not null,
+  inflow_ml       real,
+  primary key (reservoir_id, ts)
+);
+create index reservoir_readings_org_idx on public.reservoir_readings (organization_id, ts);
+
+create table public.water_pipelines (
+  id               uuid primary key default gen_random_uuid(),
+  organization_id  uuid not null references public.organizations(id) on delete cascade,
+  zone_id          uuid references public.city_zones(id) on delete set null,
+  code             text not null,
+  material         text not null,
+  diameter_mm      int not null,
+  installed_year   int not null,
+  length_m         real not null,
+  failures_by_year int[] not null default '{}',     -- repairs per year, oldest first, ending with the last 12 months
+  geom             geometry(LineString, 4326),
+  is_synthetic     boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.water_sensors (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  zone_id         uuid references public.city_zones(id) on delete set null,
+  pipeline_id     uuid references public.water_pipelines(id) on delete set null,
+  code            text not null,
+  kind            text not null default 'flow_pressure',
+  share           real,                                -- share of the zone's demand passing this meter
+  geom            geometry(Point, 4326),
+  is_synthetic    boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.water_readings (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  sensor_id       uuid not null references public.water_sensors(id) on delete cascade,
+  ts              timestamptz not null,
+  flow_lps        real not null,
+  pressure_bar    real not null,
+  consumption_m3  real not null,
+  anomaly_score   real,                                -- Isolation Forest score of the latest model run
+  anomaly_level   smallint,                            -- 0 normal, 1 suspicious, 2 high
+  primary key (sensor_id, ts)
+);
+create index water_readings_org_idx on public.water_readings (organization_id, ts);
+
+create table public.water_anomalies (
+  id              bigint generated always as identity primary key,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  sensor_id       uuid not null references public.water_sensors(id) on delete cascade,
+  zone_id         uuid references public.city_zones(id) on delete set null,
+  model_run_id    uuid references public.model_runs(id) on delete set null,
+  started_at      timestamptz not null,
+  ended_at        timestamptz not null,
+  level           text not null check (level in ('suspicious', 'high')),
+  peak_score      real not null,
+  pattern         text not null,
+  evidence        jsonb not null default '{}'::jsonb,
+  status          text not null default 'open' check (status in ('open', 'inspecting', 'confirmed', 'dismissed')),
+  reviewed_by     uuid references public.users(id) on delete set null,
+  reviewed_at     timestamptz
+);
+create index water_anomalies_org_idx on public.water_anomalies (organization_id, started_at desc);
+
+create table public.water_predictions (
+  id              bigint generated always as identity primary key,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  zone_id         uuid not null references public.city_zones(id) on delete cascade,
+  model_run_id    uuid references public.model_runs(id) on delete cascade,
+  granularity     text not null check (granularity in ('hour', 'day')),
+  target_at       timestamptz not null,
+  predicted_m3    real not null,
+  lower_m3        real not null,
+  upper_m3        real not null
+);
+create index water_predictions_org_idx on public.water_predictions (organization_id, granularity, target_at);
+
+create table public.pipeline_risk (
+  pipeline_id     uuid primary key references public.water_pipelines(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  model_run_id    uuid references public.model_runs(id) on delete set null,
+  probability     real not null,                       -- of at least one failure in the next 12 months
+  level           text not null check (level in ('low', 'medium', 'high')),
+  factors         jsonb not null default '[]'::jsonb,
+  scored_at       timestamptz not null default now()
+);
+create index pipeline_risk_org_idx on public.pipeline_risk (organization_id);
+
+create table public.reservoir_risk (
+  reservoir_id    uuid primary key references public.water_reservoirs(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  model_run_id    uuid references public.model_runs(id) on delete set null,
+  current_pct     real not null,
+  projected_pct   real[] not null,                     -- end of each of the next 7 days
+  min_pct         real not null,
+  days_to_20pct   int,
+  risk            text not null check (risk in ('low', 'medium', 'high')),
+  scored_at       timestamptz not null default now()
+);
+create index reservoir_risk_org_idx on public.reservoir_risk (organization_id);
+
+-- ------------------------------------------------------------------------------------------------------ waste
+create table public.waste_bins (
+  id               uuid primary key default gen_random_uuid(),
+  organization_id  uuid not null references public.organizations(id) on delete cascade,
+  zone_id          uuid references public.city_zones(id) on delete set null,
+  code             text not null,
+  kind             text not null,
+  capacity_l       int not null,
+  collect_every_h  int not null default 24,
+  geom             geometry(Point, 4326),
+  is_synthetic     boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.waste_readings (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  bin_id          uuid not null references public.waste_bins(id) on delete cascade,
+  ts              timestamptz not null,
+  fill_pct        real not null,
+  collected       boolean not null default false,
+  primary key (bin_id, ts)
+);
+create index waste_readings_org_idx on public.waste_readings (organization_id, ts);
+
+create table public.waste_predictions (
+  bin_id          uuid primary key references public.waste_bins(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  model_run_id    uuid references public.model_runs(id) on delete set null,
+  generated_at    timestamptz not null,
+  fill_now        real not null,
+  fill_6h         real not null,
+  fill_12h        real not null,
+  fill_24h        real not null,
+  p_overflow_6h   real not null,
+  p_overflow_12h  real not null,
+  p_overflow_24h  real not null
+);
+create index waste_predictions_org_idx on public.waste_predictions (organization_id);
+
+create table public.collection_vehicles (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  zone_id         uuid references public.city_zones(id) on delete set null,
+  code            text not null,
+  capacity_l      int not null,
+  depot           geometry(Point, 4326),
+  active          boolean not null default true,
+  is_synthetic    boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.collection_plans (
+  id               uuid primary key default gen_random_uuid(),
+  organization_id  uuid not null references public.organizations(id) on delete cascade,
+  zone_id          uuid not null references public.city_zones(id) on delete cascade,
+  model_run_id     uuid references public.model_runs(id) on delete set null,
+  planned_for      date not null,
+  kind             text not null check (kind in ('optimised', 'fixed')),
+  distance_km      real not null,
+  minutes          real not null,
+  bins_visited     int not null,
+  priority_bins    int not null,
+  priority_covered int not null,
+  solver           text not null,
+  created_at       timestamptz not null default now()
+);
+create index collection_plans_org_idx on public.collection_plans (organization_id, planned_for);
+
+create table public.collection_routes (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  plan_id         uuid not null references public.collection_plans(id) on delete cascade,
+  vehicle_id      uuid references public.collection_vehicles(id) on delete set null,
+  seq             int not null,
+  stops           text[] not null,                     -- bin codes in visiting order
+  geom            geometry(LineString, 4326),
+  distance_km     real not null,
+  minutes         real not null,
+  load_l          real not null
+);
+create index collection_routes_plan_idx on public.collection_routes (plan_id);
+
+-- ---------------------------------------------------------------------------------------------------- traffic
+create table public.traffic_networks (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  nodes           jsonb not null,                      -- [[lon, lat], ...]
+  node_zone_ids   jsonb not null,
+  peak_trips      real,                                -- calibrated peak-hour trips for the what-if model
+  is_synthetic    boolean not null default true,
+  updated_at      timestamptz not null default now()
+);
+
+create table public.roads (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  zone_id         uuid references public.city_zones(id) on delete set null,
+  code            text not null,
+  name            text not null,
+  from_node       int not null,
+  to_node         int not null,
+  lanes           int not null,
+  speed_limit     int not null,
+  capacity_vph    int not null,
+  length_m        real not null,
+  monitored       boolean not null default false,
+  geom            geometry(LineString, 4326),
+  is_synthetic    boolean not null default true,
+  unique (organization_id, code)
+);
+
+create table public.traffic_readings (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  road_id         uuid not null references public.roads(id) on delete cascade,
+  ts              timestamptz not null,
+  speed_kmh       real not null,
+  volume_vph      real not null,
+  incident        boolean not null default false,
+  primary key (road_id, ts)
+);
+create index traffic_readings_org_idx on public.traffic_readings (organization_id, ts);
+
+create table public.weather_readings (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  ts              timestamptz not null,
+  rain_mm_h       real not null,
+  is_synthetic    boolean not null default true,
+  primary key (organization_id, ts)
+);
+
+create table public.traffic_predictions (
+  road_id         uuid not null references public.roads(id) on delete cascade,
+  horizon_min     int not null check (horizon_min in (15, 30, 60)),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  model_run_id    uuid references public.model_runs(id) on delete set null,
+  generated_at    timestamptz not null,
+  speed_kmh       real not null,
+  congestion      real not null,                       -- 1 - speed / limit
+  level           text not null,
+  primary key (road_id, horizon_min)
+);
+create index traffic_predictions_org_idx on public.traffic_predictions (organization_id);
+
+create table public.traffic_incidents (
+  id              bigint generated always as identity primary key,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  road_id         uuid references public.roads(id) on delete set null,
+  kind            text not null,
+  severity        text not null,
+  occurred_at     timestamptz not null,
+  duration_min    int,
+  geom            geometry(Point, 4326),
+  is_synthetic    boolean not null default true
+);
+create index traffic_incidents_org_idx on public.traffic_incidents (organization_id, occurred_at desc);
+
+create table public.traffic_simulations (
+  id              uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  road_id         uuid references public.roads(id) on delete set null,
+  action          text not null check (action in ('close', 'reduce_capacity', 'add_demand')),
+  params          jsonb not null default '{}'::jsonb,
+  result          jsonb not null,
+  created_by      uuid references public.users(id) on delete set null,
+  created_at      timestamptz not null default now()
+);
+create index traffic_simulations_org_idx on public.traffic_simulations (organization_id, created_at desc);
+
+-- ---------------------------------------------------------------------------------------------------- access
+grant select, insert, update, delete on
+  public.ops_datasets, public.ops_jobs, public.model_runs, public.water_reservoirs, public.reservoir_readings, public.water_pipelines,
+  public.water_sensors, public.water_readings, public.water_anomalies, public.water_predictions, public.pipeline_risk,
+  public.reservoir_risk, public.waste_bins, public.waste_readings, public.waste_predictions, public.collection_vehicles,
+  public.collection_plans, public.collection_routes, public.traffic_networks, public.roads, public.traffic_readings,
+  public.weather_readings, public.traffic_predictions, public.traffic_incidents, public.traffic_simulations
+  to authenticated;
+grant all on
+  public.ops_datasets, public.ops_jobs, public.model_runs, public.water_reservoirs, public.reservoir_readings, public.water_pipelines,
+  public.water_sensors, public.water_readings, public.water_anomalies, public.water_predictions, public.pipeline_risk,
+  public.reservoir_risk, public.waste_bins, public.waste_readings, public.waste_predictions, public.collection_vehicles,
+  public.collection_plans, public.collection_routes, public.traffic_networks, public.roads, public.traffic_readings,
+  public.weather_readings, public.traffic_predictions, public.traffic_incidents, public.traffic_simulations
+  to service_role;
+grant usage, select on all sequences in schema public to authenticated, service_role;
+
+-- Staff read; the operations jobs write as the organization's administrator (apps/api), under these same policies.
+do $$
+declare t text;
+begin
+  foreach t in array array['ops_datasets', 'ops_jobs', 'model_runs', 'water_reservoirs', 'reservoir_readings', 'water_pipelines',
+    'water_sensors', 'water_readings', 'water_predictions', 'pipeline_risk', 'reservoir_risk', 'waste_bins',
+    'waste_readings', 'waste_predictions', 'collection_vehicles', 'collection_plans', 'collection_routes',
+    'traffic_networks', 'roads', 'traffic_readings', 'weather_readings', 'traffic_predictions', 'traffic_incidents']
+  loop
+    perform app.apply_tenant_policies(('public.' || t)::regclass, '{city_admin,dept_officer,field_worker}', '{city_admin}');
+  end loop;
+end $$;
+-- officers review anomalies and save simulations
+select app.apply_tenant_policies('public.water_anomalies', '{city_admin,dept_officer,field_worker}', '{city_admin,dept_officer}');
+select app.apply_tenant_policies('public.traffic_simulations', '{city_admin,dept_officer}', '{city_admin,dept_officer}');
+
+-- ---------------------------------------------------------------------------------------------------- plans
+-- Feature flags in plans.limits ("predictions", "advanced_analytics", ...). Missing means not included.
+create or replace function app.plan_feature(p_org uuid, p_key text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((p.limits ->> p_key)::boolean, false)
+    from organizations o join plans p on p.code = o.plan_code
+   where o.id = p_org
+$$;
+revoke all on function app.plan_feature(uuid, text) from public, anon;
+grant execute on function app.plan_feature(uuid, text) to authenticated, service_role;
+
+-- ---------------------------------------------------------------------------------------------------- reads
+-- One call per page. security invoker (the default): Row Level Security applies to everything read here.
+
+create or replace function public.ops_status() returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'dataset', (select jsonb_build_object('kind', kind, 'generated_at', generated_at, 'seed', seed)
+                  from ops_datasets where organization_id = app.org_id()),
+    'predictions_enabled', app.plan_feature(app.org_id(), 'predictions'),
+    'job', (select jsonb_build_object('id', id, 'kind', kind, 'status', status, 'step', step, 'error', error,
+                                      'created_at', created_at, 'finished_at', finished_at, 'result', result)
+              from ops_jobs where organization_id = app.org_id() order by created_at desc limit 1),
+    'runs', coalesce((select jsonb_agg(jsonb_build_object('model', model, 'method', method, 'trained_at', trained_at,
+                                                          'is_demo', is_demo) order by model)
+                        from (select distinct on (model) * from model_runs where organization_id = app.org_id()
+                              order by model, trained_at desc) r), '[]'::jsonb))
+$$;
+
+create or replace function public.ops_water(p_zone uuid default null) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with last as (select max(ts) as lts from water_readings where organization_id = app.org_id()),
+  zr as (
+    select s.zone_id, r.ts, sum(r.consumption_m3) as m3
+      from water_readings r join water_sensors s on s.id = r.sensor_id, last
+     where r.organization_id = app.org_id() and r.ts > last.lts - interval '8 days'
+       and (p_zone is null or s.zone_id = p_zone)
+     group by s.zone_id, r.ts
+  ),
+  runs as (select distinct on (model) * from model_runs where organization_id = app.org_id() and module = 'water'
+            order by model, trained_at desc)
+  select jsonb_build_object(
+    'last_reading', (select lts from last),
+    'is_synthetic', coalesce((select bool_or(is_synthetic) from water_sensors where organization_id = app.org_id()), false),
+    'runs', coalesce((select jsonb_object_agg(model, jsonb_build_object('method', method, 'trained_at', trained_at,
+                                                                        'metrics', metrics, 'is_demo', is_demo)) from runs), '{}'::jsonb),
+    'kpis', jsonb_build_object(
+      'consumption_24h_m3', (select round(sum(m3)::numeric) from zr, last where zr.ts > last.lts - interval '24 hours'),
+      'consumption_prev_week_m3', (select round(sum(m3)::numeric) from zr, last
+                                    where zr.ts > last.lts - interval '192 hours' and zr.ts <= last.lts - interval '168 hours'),
+      'open_anomalies', (select count(*) from water_anomalies a where a.organization_id = app.org_id() and a.status in ('open', 'inspecting')
+                          and (p_zone is null or a.zone_id = p_zone)),
+      'high_anomalies_7d', (select count(*) from water_anomalies a, last where a.organization_id = app.org_id() and a.level = 'high'
+                             and a.started_at > last.lts - interval '7 days' and (p_zone is null or a.zone_id = p_zone)),
+      'high_risk_pipes', (select count(*) from pipeline_risk k join water_pipelines p on p.id = k.pipeline_id
+                           where k.organization_id = app.org_id() and k.level = 'high' and (p_zone is null or p.zone_id = p_zone)),
+      'pipes', (select count(*) from water_pipelines where organization_id = app.org_id() and (p_zone is null or zone_id = p_zone)),
+      'reservoirs_at_risk', (select count(*) from reservoir_risk k join water_reservoirs r on r.id = k.reservoir_id
+                              where k.organization_id = app.org_id() and k.risk <> 'low' and (p_zone is null or r.zone_id = p_zone))
+    ),
+    'hourly', coalesce((select jsonb_agg(jsonb_build_object('ts', ts, 'm3', round(m3::numeric, 1)) order by ts)
+                          from (select ts, sum(m3) as m3 from zr, last where zr.ts > last.lts - interval '7 days' group by ts) h), '[]'::jsonb),
+    'hourly_forecast', coalesce((select jsonb_agg(jsonb_build_object('ts', target_at, 'm3', round(v::numeric, 1),
+                                                                     'lower', round(lo::numeric, 1), 'upper', round(hi::numeric, 1)) order by target_at)
+                                   from (select target_at, sum(predicted_m3) v, sum(lower_m3) lo, sum(upper_m3) hi
+                                           from water_predictions where organization_id = app.org_id() and granularity = 'hour'
+                                            and (p_zone is null or zone_id = p_zone) group by target_at) f), '[]'::jsonb),
+    'daily', coalesce((select jsonb_agg(jsonb_build_object('day', day, 'm3', round(m3::numeric)) order by day)
+                         from (select date_trunc('day', r.ts at time zone 'Asia/Kolkata')::date as day, sum(r.consumption_m3) m3
+                                 from water_readings r join water_sensors s on s.id = r.sensor_id, last
+                                where r.organization_id = app.org_id() and r.ts > last.lts - interval '61 days'
+                                  and (p_zone is null or s.zone_id = p_zone)
+                                group by 1) d
+                        where day > (select (lts at time zone 'Asia/Kolkata')::date from last) - 60
+                          and day < (select (lts at time zone 'Asia/Kolkata')::date from last)), '[]'::jsonb),
+    'daily_forecast', coalesce((select jsonb_agg(jsonb_build_object('day', (target_at at time zone 'Asia/Kolkata')::date, 'm3', round(v::numeric),
+                                                                    'lower', round(lo::numeric), 'upper', round(hi::numeric)) order by target_at)
+                                  from (select target_at, sum(predicted_m3) v, sum(lower_m3) lo, sum(upper_m3) hi
+                                          from water_predictions where organization_id = app.org_id() and granularity = 'day'
+                                           and (p_zone is null or zone_id = p_zone) group by target_at) f), '[]'::jsonb),
+    'zones', coalesce((select jsonb_agg(jsonb_build_object('zone_id', z.id, 'code', z.code, 'name', z.name,
+                                                           'm3_per_day', round(t.m3 / 7), 'litres_per_person',
+                                                           case when z.population > 0 then round(t.m3 / 7 * 1000 / z.population) end,
+                                                           'vs_prev_week_pct', case when t.prev > 0 then round(((t.m3 / t.prev - 1) * 100)::numeric, 1) end)
+                                        order by t.m3 desc)
+                         from city_zones z
+                         join (select s.zone_id,
+                                      sum(r.consumption_m3) filter (where r.ts > last.lts - interval '7 days') as m3,
+                                      sum(r.consumption_m3) filter (where r.ts <= last.lts - interval '7 days' and r.ts > last.lts - interval '14 days') as prev
+                                 from water_readings r join water_sensors s on s.id = r.sensor_id, last
+                                where r.organization_id = app.org_id() and r.ts > last.lts - interval '14 days'
+                                group by s.zone_id) t on t.zone_id = z.id
+                        where z.organization_id = app.org_id()), '[]'::jsonb),
+    'anomalies', coalesce((select jsonb_agg(x order by x->>'started_at' desc) from (
+                             select jsonb_build_object('id', a.id, 'sensor', s.code, 'zone', z.name, 'zone_code', z.code,
+                                                       'started_at', a.started_at, 'ended_at', a.ended_at, 'level', a.level,
+                                                       'score', round(a.peak_score::numeric, 3), 'pattern', a.pattern,
+                                                       'evidence', a.evidence, 'status', a.status,
+                                                       'point', st_asgeojson(s.geom)::jsonb) as x
+                               from water_anomalies a join water_sensors s on s.id = a.sensor_id
+                               left join city_zones z on z.id = a.zone_id
+                              where a.organization_id = app.org_id() and (p_zone is null or a.zone_id = p_zone)
+                              order by a.started_at desc limit 60) q), '[]'::jsonb),
+    'anomaly_days', coalesce((select jsonb_agg(jsonb_build_object('day', day, 'suspicious', sus, 'high', hi) order by day)
+                                from (select (r.ts at time zone 'Asia/Kolkata')::date as day,
+                                             count(*) filter (where r.anomaly_level = 1) sus, count(*) filter (where r.anomaly_level = 2) hi
+                                        from water_readings r join water_sensors s on s.id = r.sensor_id, last
+                                       where r.organization_id = app.org_id() and r.ts > last.lts - interval '30 days'
+                                         and (p_zone is null or s.zone_id = p_zone)
+                                       group by 1) d), '[]'::jsonb),
+    'pipelines', coalesce((select jsonb_agg(jsonb_build_object(
+                             'type', 'Feature', 'geometry', st_asgeojson(p.geom)::jsonb,
+                             'properties', jsonb_build_object('id', p.id, 'code', p.code, 'material', p.material, 'diameter_mm', p.diameter_mm,
+                                                              'installed_year', p.installed_year, 'length_m', round(p.length_m::numeric),
+                                                              'failures_5y', (select coalesce(sum(x), 0) from unnest(p.failures_by_year[2:]) x),
+                                                              'risk', round(k.probability::numeric, 3), 'level', k.level, 'factors', k.factors,
+                                                              'zone_id', p.zone_id)))
+                             from water_pipelines p left join pipeline_risk k on k.pipeline_id = p.id
+                            where p.organization_id = app.org_id() and (p_zone is null or p.zone_id = p_zone)), '[]'::jsonb),
+    'sensors', coalesce((select jsonb_agg(jsonb_build_object(
+                           'type', 'Feature', 'geometry', st_asgeojson(s.geom)::jsonb,
+                           'properties', jsonb_build_object('code', s.code, 'zone_id', s.zone_id,
+                                                            'flow_lps', l.flow_lps, 'pressure_bar', l.pressure_bar, 'level', l.anomaly_level)))
+                           from water_sensors s
+                           left join lateral (select flow_lps, pressure_bar, anomaly_level from water_readings r
+                                               where r.sensor_id = s.id order by ts desc limit 1) l on true
+                          where s.organization_id = app.org_id() and (p_zone is null or s.zone_id = p_zone)), '[]'::jsonb),
+    'reservoirs', coalesce((select jsonb_agg(jsonb_build_object(
+                              'code', r.code, 'name', r.name, 'zone_id', r.zone_id, 'capacity_ml', r.capacity_ml,
+                              'point', st_asgeojson(r.geom)::jsonb, 'current_pct', k.current_pct, 'projected_pct', k.projected_pct,
+                              'min_pct', k.min_pct, 'days_to_20pct', k.days_to_20pct, 'risk', k.risk,
+                              'levels', (select jsonb_agg(jsonb_build_object('ts', ts, 'pct', round(level_pct::numeric, 1)) order by ts)
+                                           from reservoir_readings rr, last
+                                          where rr.reservoir_id = r.id and rr.ts > last.lts - interval '7 days'
+                                            and extract(hour from rr.ts)::int % 3 = 0)) order by k.min_pct nulls last)
+                              from water_reservoirs r left join reservoir_risk k on k.reservoir_id = r.id
+                             where r.organization_id = app.org_id() and (p_zone is null or r.zone_id = p_zone)), '[]'::jsonb)
+  )
+$$;
+
+create or replace function public.ops_waste(p_zone uuid default null) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with last as (select max(ts) as lts from waste_readings where organization_id = app.org_id()),
+  runs as (select distinct on (model) * from model_runs where organization_id = app.org_id() and module = 'waste'
+            order by model, trained_at desc),
+  plan_day as (select max(planned_for) as d from collection_plans where organization_id = app.org_id())
+  select jsonb_build_object(
+    'last_reading', (select lts from last),
+    'is_synthetic', coalesce((select bool_or(is_synthetic) from waste_bins where organization_id = app.org_id()), false),
+    'runs', coalesce((select jsonb_object_agg(model, jsonb_build_object('method', method, 'trained_at', trained_at,
+                                                                        'metrics', metrics, 'is_demo', is_demo)) from runs), '{}'::jsonb),
+    'kpis', (select jsonb_build_object(
+               'bins', count(*), 'full_now', count(*) filter (where p.fill_now >= 95),
+               'overflow_6h', count(*) filter (where p.p_overflow_6h >= 0.5),
+               'overflow_12h', count(*) filter (where p.p_overflow_12h >= 0.5),
+               'overflow_24h', count(*) filter (where p.p_overflow_24h >= 0.5),
+               'avg_fill', round(avg(p.fill_now)::numeric, 1))
+               from waste_bins b left join waste_predictions p on p.bin_id = b.id
+              where b.organization_id = app.org_id() and (p_zone is null or b.zone_id = p_zone)),
+    'bins', coalesce((select jsonb_agg(jsonb_build_object(
+                        'type', 'Feature', 'geometry', st_asgeojson(b.geom)::jsonb,
+                        'properties', jsonb_build_object('code', b.code, 'kind', b.kind, 'capacity_l', b.capacity_l, 'zone_id', b.zone_id,
+                                                         'collect_every_h', b.collect_every_h,
+                                                         'fill_now', p.fill_now, 'fill_6h', p.fill_6h, 'fill_12h', p.fill_12h, 'fill_24h', p.fill_24h,
+                                                         'p6', round(p.p_overflow_6h::numeric, 3), 'p12', round(p.p_overflow_12h::numeric, 3),
+                                                         'p24', round(p.p_overflow_24h::numeric, 3))))
+                        from waste_bins b left join waste_predictions p on p.bin_id = b.id
+                       where b.organization_id = app.org_id() and (p_zone is null or b.zone_id = p_zone)), '[]'::jsonb),
+    -- litres put into bins per day: the rises in fill between readings, times bin size
+    'generation', coalesce((select jsonb_agg(jsonb_build_object('day', day, 'litres', round(l)) order by day)
+                              from (select (ts at time zone 'Asia/Kolkata')::date as day, sum(rise) as l
+                                      from (select r.ts, greatest(r.fill_pct - lag(r.fill_pct) over (partition by r.bin_id order by r.ts), 0)
+                                                     * b.capacity_l / 100.0 * (not r.collected)::int as rise
+                                              from waste_readings r join waste_bins b on b.id = r.bin_id
+                                             where r.organization_id = app.org_id() and (p_zone is null or b.zone_id = p_zone)) x
+                                     group by 1) d
+                             where day > (select (lts at time zone 'Asia/Kolkata')::date from last) - 28
+                               and day < (select (lts at time zone 'Asia/Kolkata')::date from last)), '[]'::jsonb),
+    'by_hour', coalesce((select jsonb_agg(jsonb_build_object('hour', h, 'fill', round(f::numeric, 1)) order by h)
+                           from (select extract(hour from r.ts at time zone 'Asia/Kolkata')::int h, avg(r.fill_pct) f
+                                   from waste_readings r join waste_bins b on b.id = r.bin_id
+                                  where r.organization_id = app.org_id() and (p_zone is null or b.zone_id = p_zone)
+                                  group by 1) q), '[]'::jsonb),
+    -- collection efficiency: how full bins were when emptied (low = wasted trips) and time spent full (overflowing)
+    'zones', coalesce((select jsonb_agg(jsonb_build_object('zone_id', z.id, 'code', z.code, 'name', z.name,
+                                                           'avg_fill_at_collection', round(e.at_collection::numeric, 1),
+                                                           'hours_full_pct', round(e.full_share::numeric * 100, 2),
+                                                           'collections', e.collections) order by z.code)
+                         from city_zones z join (
+                           select b.zone_id,
+                                  avg(prev_fill) filter (where collected) as at_collection,
+                                  avg((fill_pct >= 95)::int) as full_share,
+                                  count(*) filter (where collected) as collections
+                             from (select r.*, lag(r.fill_pct) over (partition by r.bin_id order by r.ts) as prev_fill
+                                     from waste_readings r where r.organization_id = app.org_id()) r
+                             join waste_bins b on b.id = r.bin_id
+                            group by b.zone_id) e on e.zone_id = z.id
+                        where z.organization_id = app.org_id()), '[]'::jsonb),
+    'plans', coalesce((select jsonb_agg(jsonb_build_object('zone_id', p.zone_id, 'zone', z.name, 'kind', p.kind,
+                                                           'planned_for', p.planned_for, 'distance_km', p.distance_km,
+                                                           'minutes', p.minutes, 'bins_visited', p.bins_visited,
+                                                           'priority_bins', p.priority_bins, 'priority_covered', p.priority_covered,
+                                                           'solver', p.solver,
+                                                           'routes', (select coalesce(jsonb_agg(jsonb_build_object(
+                                                                        'vehicle', v.code, 'stops', r.stops, 'distance_km', r.distance_km,
+                                                                        'minutes', r.minutes, 'load_l', r.load_l,
+                                                                        'geometry', st_asgeojson(r.geom)::jsonb) order by r.seq), '[]'::jsonb)
+                                                                        from collection_routes r left join collection_vehicles v on v.id = r.vehicle_id
+                                                                       where r.plan_id = p.id))
+                                        order by z.code, p.kind)
+                         from collection_plans p join city_zones z on z.id = p.zone_id, plan_day
+                        where p.organization_id = app.org_id() and p.planned_for = plan_day.d
+                          and (p_zone is null or p.zone_id = p_zone)), '[]'::jsonb),
+    'vehicles', coalesce((select jsonb_agg(jsonb_build_object('code', code, 'zone_id', zone_id, 'capacity_l', capacity_l,
+                                                              'depot', st_asgeojson(depot)::jsonb))
+                            from collection_vehicles where organization_id = app.org_id() and (p_zone is null or zone_id = p_zone)), '[]'::jsonb)
+  )
+$$;
+
+create or replace function public.ops_traffic(p_zone uuid default null) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with last as (select max(ts) as lts from traffic_readings where organization_id = app.org_id()),
+  runs as (select distinct on (model) * from model_runs where organization_id = app.org_id() and module = 'traffic'
+            order by model, trained_at desc),
+  now_r as (select distinct on (r.road_id) r.road_id, r.speed_kmh, r.volume_vph, r.incident
+              from traffic_readings r, last where r.organization_id = app.org_id() and r.ts > last.lts - interval '1 hour'
+             order by r.road_id, r.ts desc)
+  select jsonb_build_object(
+    'last_reading', (select lts from last),
+    'is_synthetic', coalesce((select bool_or(is_synthetic) from roads where organization_id = app.org_id()), false),
+    'runs', coalesce((select jsonb_object_agg(model, jsonb_build_object('method', method, 'trained_at', trained_at,
+                                                                        'metrics', metrics, 'is_demo', is_demo)) from runs), '{}'::jsonb),
+    'roads', coalesce((select jsonb_agg(jsonb_build_object(
+                         'type', 'Feature', 'geometry', st_asgeojson(d.geom)::jsonb,
+                         'properties', jsonb_build_object(
+                           'id', d.id, 'code', d.code, 'name', d.name, 'lanes', d.lanes, 'speed_limit', d.speed_limit,
+                           'capacity_vph', d.capacity_vph, 'length_m', round(d.length_m::numeric), 'monitored', d.monitored,
+                           'zone_id', d.zone_id,
+                           'speed_now', n.speed_kmh, 'volume_now', n.volume_vph, 'incident_now', n.incident,
+                           'congestion_now', case when n.speed_kmh is not null then round((1 - n.speed_kmh / d.speed_limit)::numeric, 3) end,
+                           'travel_min_now', case when n.speed_kmh > 0 then round((d.length_m / 1000 / n.speed_kmh * 60)::numeric, 1) end,
+                           'forecast', (select jsonb_object_agg(horizon_min::text, jsonb_build_object('speed', speed_kmh,
+                                                  'congestion', round(congestion::numeric, 3), 'level', level))
+                                          from traffic_predictions tp where tp.road_id = d.id),
+                           'incidents_365d', (select count(*) from traffic_incidents i where i.road_id = d.id)))
+                         order by d.code)
+                         from roads d left join now_r n on n.road_id = d.id
+                        where d.organization_id = app.org_id() and (p_zone is null or d.zone_id = p_zone)), '[]'::jsonb),
+    -- peak hours: average congestion of monitored roads by hour of day, weekdays and weekends
+    'by_hour', coalesce((select jsonb_agg(jsonb_build_object('hour', h, 'weekday', round(wd::numeric, 3), 'weekend', round(we::numeric, 3)) order by h)
+                           from (select extract(hour from r.ts at time zone 'Asia/Kolkata')::int h,
+                                        avg(1 - r.speed_kmh / d.speed_limit) filter (where extract(isodow from r.ts at time zone 'Asia/Kolkata') < 6) wd,
+                                        avg(1 - r.speed_kmh / d.speed_limit) filter (where extract(isodow from r.ts at time zone 'Asia/Kolkata') >= 6) we
+                                   from traffic_readings r join roads d on d.id = r.road_id
+                                  where r.organization_id = app.org_id() and (p_zone is null or d.zone_id = p_zone)
+                                  group by 1) q), '[]'::jsonb),
+    'recent', coalesce((select jsonb_agg(jsonb_build_object('ts', ts, 'congestion', round(c::numeric, 3), 'speed', round(s::numeric, 1)) order by ts)
+                          from (select r.ts, avg(1 - r.speed_kmh / d.speed_limit) c, avg(r.speed_kmh) s
+                                  from traffic_readings r join roads d on d.id = r.road_id, last
+                                 where r.organization_id = app.org_id() and r.ts > last.lts - interval '2 days'
+                                   and (p_zone is null or d.zone_id = p_zone)
+                                 group by r.ts) q), '[]'::jsonb),
+    'incidents', coalesce((select jsonb_agg(jsonb_build_object('kind', kind, 'severity', severity, 'occurred_at', occurred_at,
+                                                               'duration_min', duration_min, 'point', st_asgeojson(i.geom)::jsonb,
+                                                               'road', d.name) order by occurred_at desc)
+                             from traffic_incidents i left join roads d on d.id = i.road_id
+                            where i.organization_id = app.org_id() and (p_zone is null or d.zone_id = p_zone)), '[]'::jsonb),
+    'incidents_by_kind', coalesce((select jsonb_agg(jsonb_build_object('kind', kind, 'severity', severity, 'count', n) order by n desc)
+                                     from (select kind, severity, count(*) n from traffic_incidents i left join roads d on d.id = i.road_id
+                                            where i.organization_id = app.org_id() and (p_zone is null or d.zone_id = p_zone)
+                                            group by 1, 2) q), '[]'::jsonb),
+    'simulations', coalesce((select jsonb_agg(jsonb_build_object('id', s.id, 'road', d.name, 'action', s.action, 'params', s.params,
+                                                                 'created_at', s.created_at,
+                                                                 'vehicle_hours_change_pct', s.result->'vehicle_hours_change_pct',
+                                                                 'avg_trip_minutes_before', s.result->'avg_trip_minutes_before',
+                                                                 'avg_trip_minutes_after', s.result->'avg_trip_minutes_after') order by s.created_at desc)
+                               from (select * from traffic_simulations where organization_id = app.org_id()
+                                      order by created_at desc limit 10) s left join roads d on d.id = s.road_id), '[]'::jsonb)
+  )
+$$;
+
+-- officers review a water anomaly: inspecting, confirmed (a fault was found) or dismissed
+create or replace function public.water_anomaly_review(p_id bigint, p_status text) returns void
+language plpgsql set search_path = public as $$
+begin
+  if p_status not in ('open', 'inspecting', 'confirmed', 'dismissed') then
+    raise exception 'Unknown status %', p_status;
+  end if;
+  update water_anomalies set status = p_status, reviewed_by = auth.uid(), reviewed_at = now()
+   where id = p_id and organization_id = app.org_id();
+  if not found then
+    raise exception 'Anomaly not found';
+  end if;
+end $$;
+
+grant execute on function public.ops_status(), public.ops_water(uuid), public.ops_waste(uuid), public.ops_traffic(uuid),
+  public.water_anomaly_review(bigint, text) to authenticated;
+revoke execute on function public.ops_status(), public.ops_water(uuid), public.ops_waste(uuid), public.ops_traffic(uuid),
+  public.water_anomaly_review(bigint, text) from anon;
+
+-- ------------------------------------------------------------------------------------- dashboard and city map
+-- Compact reads for pages that show operations alongside the published figures.
+create or replace function public.ops_summary() returns jsonb
+language sql stable set search_path = public, extensions as $$
+  with lw as (select max(ts) as lts from water_readings where organization_id = app.org_id()),
+  lt as (select max(ts) as lts from traffic_readings where organization_id = app.org_id())
+  select case when not exists (select 1 from ops_datasets where organization_id = app.org_id()) then null else jsonb_build_object(
+    'is_synthetic', (select kind = 'demo' from ops_datasets where organization_id = app.org_id()),
+    'water', jsonb_build_object(
+      'consumption_24h_m3', (select round(sum(r.consumption_m3)::numeric) from water_readings r, lw
+                              where r.organization_id = app.org_id() and r.ts > lw.lts - interval '24 hours'),
+      'consumption_prev_week_m3', (select round(sum(r.consumption_m3)::numeric) from water_readings r, lw
+                                    where r.organization_id = app.org_id() and r.ts > lw.lts - interval '192 hours' and r.ts <= lw.lts - interval '168 hours'),
+      'open_anomalies', (select count(*) from water_anomalies where organization_id = app.org_id() and status in ('open', 'inspecting')),
+      'reservoirs_at_risk', (select count(*) from reservoir_risk where organization_id = app.org_id() and risk <> 'low')),
+    'risk', jsonb_build_object(
+      'pipes', (select jsonb_object_agg(level, n) from (select level, count(*) n from pipeline_risk where organization_id = app.org_id() group by level) q),
+      'bins', (select jsonb_build_object('high', count(*) filter (where p_overflow_24h >= 0.5),
+                                         'medium', count(*) filter (where p_overflow_24h >= 0.2 and p_overflow_24h < 0.5),
+                                         'low', count(*) filter (where p_overflow_24h < 0.2))
+                 from waste_predictions where organization_id = app.org_id()),
+      'roads', (select jsonb_build_object('high', count(*) filter (where congestion >= 0.4), 'medium', count(*) filter (where congestion >= 0.2 and congestion < 0.4),
+                                          'low', count(*) filter (where congestion < 0.2))
+                  from traffic_predictions where organization_id = app.org_id() and horizon_min = 60),
+      'reservoirs', (select jsonb_object_agg(risk, n) from (select risk, count(*) n from reservoir_risk where organization_id = app.org_id() group by risk) q)),
+    'waste', (select jsonb_build_object('bins', count(*), 'full_now', count(*) filter (where fill_now >= 95),
+                                        'overflow_24h', count(*) filter (where p_overflow_24h >= 0.5))
+                from waste_predictions where organization_id = app.org_id()),
+    'collection', (select jsonb_build_object('avg_fill_at_collection', round(avg(prev_fill) filter (where collected)::numeric, 1),
+                                             'hours_full_pct', round((avg((fill_pct >= 95)::int) * 100)::numeric, 2))
+                     from (select r.collected, r.fill_pct, lag(r.fill_pct) over (partition by r.bin_id order by r.ts) prev_fill
+                             from waste_readings r where r.organization_id = app.org_id()) q),
+    'traffic', (select jsonb_build_object('monitored', count(*), 'avg_congestion_now', round(avg(1 - r.speed_kmh / d.speed_limit)::numeric, 3),
+                                          'heavy_now', count(*) filter (where 1 - r.speed_kmh / d.speed_limit >= 0.4))
+                  from traffic_readings r join roads d on d.id = r.road_id, lt
+                 where r.organization_id = app.org_id() and r.ts = lt.lts)
+  ) end
+$$;
+
+-- Point and line layers for the City Map: complaints (real, from CivicOS users) and the operations assets.
+create or replace function public.map_layers() returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'is_synthetic', coalesce((select kind = 'demo' from ops_datasets where organization_id = app.org_id()), false),
+    'complaints', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', jsonb_build_object('type', 'Point', 'coordinates', jsonb_build_array(c.lon, c.lat)),
+        'properties', jsonb_build_object('reference', c.reference, 'category', cc.name, 'severity', c.severity, 'status', c.status,
+                                         'created', to_char(c.created_at at time zone 'Asia/Kolkata', 'DD Mon YYYY'))))
+      from complaints c left join complaint_categories cc on cc.id = c.category_id
+     where c.organization_id = app.org_id() and c.lon is not null and c.lat is not null
+       and (c.resolved_at is null or c.created_at > now() - interval '90 days')), '[]'::jsonb)),
+    'pipes', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', st_asgeojson(p.geom)::jsonb,
+        'properties', jsonb_build_object('code', p.code, 'material', p.material, 'installed_year', p.installed_year,
+                                         'risk', round(k.probability::numeric, 3), 'level', k.level)))
+      from water_pipelines p left join pipeline_risk k on k.pipeline_id = p.id where p.organization_id = app.org_id()), '[]'::jsonb)),
+    'anomalies', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', st_asgeojson(s.geom)::jsonb,
+        'properties', jsonb_build_object('sensor', s.code, 'level', a.level, 'pattern', a.pattern,
+                                         'started', to_char(a.started_at at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'))))
+      from water_anomalies a join water_sensors s on s.id = a.sensor_id
+     where a.organization_id = app.org_id() and a.status in ('open', 'inspecting')), '[]'::jsonb)),
+    'bins', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', st_asgeojson(b.geom)::jsonb,
+        'properties', jsonb_build_object('code', b.code, 'fill_now', p.fill_now, 'p24', round(p.p_overflow_24h::numeric, 3))))
+      from waste_bins b left join waste_predictions p on p.bin_id = b.id where b.organization_id = app.org_id()), '[]'::jsonb)),
+    'roads', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', st_asgeojson(d.geom)::jsonb,
+        'properties', jsonb_build_object('name', d.name, 'lanes', d.lanes, 'congestion_now',
+                                         (select round((1 - r.speed_kmh / d.speed_limit)::numeric, 3) from traffic_readings r
+                                           where r.road_id = d.id order by r.ts desc limit 1),
+                                         'congestion_60', (select round(congestion::numeric, 3) from traffic_predictions tp where tp.road_id = d.id and tp.horizon_min = 60))))
+      from roads d where d.organization_id = app.org_id()), '[]'::jsonb)),
+    'incidents', jsonb_build_object('type', 'FeatureCollection', 'features', coalesce((select jsonb_agg(jsonb_build_object(
+        'type', 'Feature', 'geometry', st_asgeojson(i.geom)::jsonb,
+        'properties', jsonb_build_object('kind', i.kind, 'severity', i.severity,
+                                         'when', to_char(i.occurred_at at time zone 'Asia/Kolkata', 'DD Mon YYYY HH24:MI'))))
+      from traffic_incidents i where i.organization_id = app.org_id() and i.occurred_at > now() - interval '90 days'), '[]'::jsonb))
+  )
+$$;
+
+grant execute on function public.ops_summary(), public.map_layers() to authenticated;
+revoke execute on function public.ops_summary(), public.map_layers() from anon;
+
+-- ------------------------------------------------------------------------------------------- recommendations
+-- The rules in 0013/0016 run first (renamed below), then these rules over the operations models. Each states its
+-- evidence and the model behind it and, for demonstration data, says so. A model's probability is quoted only where
+-- the model was checked for calibration (pipe failure risk, bin overflow).
+alter function app.generate_recommendations(uuid) rename to generate_published_recommendations;
+
+create or replace function app.generate_ops_recommendations(p_org uuid) returns int
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_n int;
+  v_demo text := case when exists (select 1 from ops_datasets where organization_id = p_org and kind = 'demo')
+                      then ' (demonstration data)' else '' end;
+  v_last timestamptz := (select max(ts) from water_readings where organization_id = p_org);
+begin
+  create temp table if not exists _ops_rec (
+    key text, rule text, module text, zone_id uuid, problem text, evidence jsonb, prediction text,
+    action text, priority text, basis text) on commit drop;
+  truncate _ops_rec;
+
+  -- O1: open water anomalies in a ward in the last 7 days, with the failure risk of the pipes the meters sit on
+  insert into _ops_rec
+  select 'water_anomaly:' || z.code, 'water_anomaly', 'water', z.id,
+         format('%s unusual flow or pressure pattern%s on meters in Ward %s in the last 7 days. Strongest: %s',
+                count(*), case when count(*) = 1 then '' else 's' end, z.code, (array_agg(a.pattern order by a.peak_score desc))[1]),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Meters', 'value', string_agg(distinct s.code, ', '), 'source', 'CivicOS anomaly model' || v_demo),
+           jsonb_build_object('label', 'Largest rise in consumption against the usual level',
+                              'value', max((a.evidence ->> 'consumption_vs_baseline_pct')::numeric) || '%', 'source', 'CivicOS anomaly model' || v_demo),
+           jsonb_build_object('label', 'Largest pressure drop', 'value', min((a.evidence ->> 'pressure_change_bar')::numeric) || ' bar',
+                              'source', 'CivicOS anomaly model' || v_demo)),
+         (select format('Highest failure risk among these pipes in the next 12 months: %s, %s%%', p.code, round((k.probability * 100)::numeric))
+            from pipeline_risk k join water_pipelines p on p.id = k.pipeline_id
+           where p.id = any (array_agg(s.pipeline_id)) order by k.probability desc limit 1),
+         format('Inspect the pipelines at these meters in Ward %s for leaks, then confirm or dismiss each anomaly on the Water page.', z.code),
+         case when bool_or(a.level = 'high') then 'high' else 'medium' end,
+         'Rule: an open anomaly from the Isolation Forest detector in the last 7 days (high priority if any reached the High level). An anomaly is a pattern to inspect, not proof of a leak.'
+    from water_anomalies a
+    join water_sensors s on s.id = a.sensor_id
+    join city_zones z on z.id = a.zone_id
+   where a.organization_id = p_org and a.status in ('open', 'inspecting') and a.started_at > v_last - interval '7 days'
+   group by z.id, z.code;
+
+  -- O2: wards with several pipes at high failure risk
+  insert into _ops_rec
+  select 'pipe_risk:' || z.code, 'pipe_risk', 'water', z.id,
+         format('%s pipes in Ward %s have at least a 60%% chance of failing in the next 12 months.', count(*), z.code),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Pipes', 'value', string_agg(p.code || ' (' || p.material || ', ' || p.installed_year || ')', ', ' order by k.probability desc),
+                              'source', 'CivicOS pipe failure model' || v_demo),
+           jsonb_build_object('label', 'Highest probability', 'value', round((max(k.probability) * 100)::numeric) || '%', 'source', 'CivicOS pipe failure model' || v_demo)),
+         format('Expected failures among these pipes over 12 months: about %s.', round(sum(k.probability)::numeric, 1)),
+         format('Schedule condition surveys of these pipes in Ward %s and add the worst to the renewal programme.', z.code),
+         case when count(*) >= 6 then 'high' else 'medium' end,
+         'Rule: four or more pipes with a failure probability of 60% or more (high priority at six). The probabilities come from a model checked for calibration on past failures.'
+    from pipeline_risk k
+    join water_pipelines p on p.id = k.pipeline_id
+    join city_zones z on z.id = p.zone_id
+   where k.organization_id = p_org and k.probability >= 0.6
+   group by z.id, z.code
+  having count(*) >= 4;
+
+  -- O3: reservoirs projected to run low within a week
+  insert into _ops_rec
+  select 'reservoir:' || r.code, 'reservoir', 'water', r.zone_id,
+         format('%s is projected to fall to %s%% within 7 days (now %s%%).', r.name, round(k.min_pct::numeric), round(k.current_pct::numeric)),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Level now', 'value', round(k.current_pct::numeric) || '%', 'source', 'Reservoir level readings' || v_demo),
+           jsonb_build_object('label', 'Lowest projected in 7 days', 'value', round(k.min_pct::numeric) || '%', 'source', 'CivicOS water balance and demand forecast' || v_demo)),
+         case when k.days_to_20pct is not null then format('Below 20%% in %s day%s.', k.days_to_20pct, case when k.days_to_20pct = 1 then '' else 's' end) end,
+         'Raise inflow to this reservoir or reschedule supply in its zone before the level falls further.',
+         case when k.risk = 'high' then 'high' else 'medium' end,
+         'Rule: projected level below 35% within 7 days (high priority below 20%).'
+    from reservoir_risk k join water_reservoirs r on r.id = k.reservoir_id
+   where k.organization_id = p_org and k.risk <> 'low';
+
+  -- O4: wards with several bins predicted to fill within 12 hours
+  insert into _ops_rec
+  select 'bins_full:' || z.code, 'bins_full', 'waste', z.id,
+         format('Ward %s has %s bins predicted to reach 95%% within 12 hours.', z.code, count(*)),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Bins', 'value', string_agg(b.code, ', ' order by p.p_overflow_12h desc), 'source', 'CivicOS overflow model' || v_demo),
+           jsonb_build_object('label', 'Full now', 'value', count(*) filter (where p.fill_now >= 95), 'source', 'Bin fill sensors' || v_demo)),
+         format('Chance of filling within 12 hours: %s.', string_agg(b.code || ' ' || round((p.p_overflow_12h * 100)::numeric) || '%', ', ' order by p.p_overflow_12h desc)),
+         format('Prioritise these locations in the next collection round in Ward %s (see the optimised route on the Waste page).', z.code),
+         case when count(*) >= 5 then 'high' else 'medium' end,
+         'Rule: three or more bins with at least a 50% chance of reaching 95% within 12 hours if not collected (high priority at five). The probabilities were checked for calibration on a held-out week.'
+    from waste_predictions p
+    join waste_bins b on b.id = p.bin_id
+    join city_zones z on z.id = b.zone_id
+   where p.organization_id = p_org and p.p_overflow_12h >= 0.5
+   group by z.id, z.code
+  having count(*) >= 3;
+
+  -- O5: roads with many incidents over the last year
+  insert into _ops_rec
+  select 'hotspot:' || d.code, 'hotspot', 'traffic', d.zone_id,
+         format('%s had %s incidents in the last 12 months, %s of them accidents.', d.name, count(*), count(*) filter (where i.kind = 'accident')),
+         jsonb_build_array(
+           jsonb_build_object('label', 'Incidents, last 12 months', 'value', count(*), 'source', 'Traffic incident records' || v_demo),
+           jsonb_build_object('label', 'Serious or fatal accidents', 'value', count(*) filter (where i.severity in ('serious', 'fatal')), 'source', 'Traffic incident records' || v_demo)),
+         null,
+         format('Commission a road safety audit of %s: junction design, speeds, lighting and crossings.', d.name),
+         case when count(*) filter (where i.severity in ('serious', 'fatal')) >= 2 then 'high' else 'medium' end,
+         'Rule: 10 or more incidents on one road in 12 months (high priority with two or more serious or fatal accidents).'
+    from traffic_incidents i join roads d on d.id = i.road_id
+   where i.organization_id = p_org and i.occurred_at > now() - interval '365 days'
+   group by d.id, d.code, d.name, d.zone_id
+  having count(*) >= 10;
+
+  insert into recommendations (organization_id, key, rule, module, zone_id, problem, evidence, prediction, action, priority, basis)
+  select p_org, key, rule, module, zone_id, problem, evidence, prediction, action, priority, basis from _ops_rec
+  on conflict (organization_id, key) do update
+     set problem = excluded.problem, evidence = excluded.evidence, prediction = excluded.prediction,
+         action = excluded.action, priority = excluded.priority, basis = excluded.basis, generated_at = now();
+  get diagnostics v_n = row_count;
+  return v_n;
+end $$;
+
+-- published rules first (they clear open recommendations no rule produces any more), then the operations rules
+create or replace function app.generate_recommendations(p_org uuid) returns int
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  return app.generate_published_recommendations(p_org) + app.generate_ops_recommendations(p_org);
+end $$;
+revoke all on function app.generate_recommendations(uuid), app.generate_published_recommendations(uuid),
+  app.generate_ops_recommendations(uuid) from public, anon, authenticated;

@@ -27,7 +27,7 @@ export const NAV: NavItem[] = [
   { href: "/water", label: "Water", icon: "water", roles: STAFF, phase: 1 },
   { href: "/complaints", label: "Complaints", icon: "complaints", roles: [...STAFF, "field_worker", "citizen"], phase: 1 },
   { href: "/waste", label: "Waste", icon: "waste", roles: STAFF, phase: 1 },
-  { href: "/traffic", label: "Traffic", icon: "traffic", roles: STAFF, phase: 99, disabledNote: "No published data" },
+  { href: "/traffic", label: "Traffic", icon: "traffic", roles: STAFF, phase: 1 },
   { href: "/assistant", label: "Assistant", icon: "assistant", roles: [...STAFF, "field_worker", "citizen"], phase: 1 },
   { href: "/insights", label: "Insights", icon: "insights", roles: STAFF, phase: 1 },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: STAFF, phase: 1 },

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
-import { Answer } from "@/components/assistant/answer";
+import { Answer, type AnswerChart } from "@/components/assistant/answer";
 import { ErrorNote } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
 import type { Citation, Mode } from "@/lib/assistant";
+import { apiConfigured } from "@/lib/api";
 import { llmConfigured } from "@/lib/llm";
 import { createClient } from "@/lib/supabase/server";
 import { ask } from "./actions";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "Assistant" };
 
 type History = {
   conversations: { id: string; title: string; created_at: string }[];
-  messages: { role: "user" | "assistant"; content: string; citations: Citation[]; mode: Mode | null; at: string }[];
+  messages: { role: "user" | "assistant"; content: string; citations: Citation[]; mode: Mode | null; charts?: AnswerChart[]; at: string }[];
   documents: number;
   usage: { used: number; limit: number | null };
 };
@@ -21,8 +22,11 @@ type History = {
 const EXAMPLES = [
   "Which wards get the least water supply?",
   "How long does ward K/W take to close complaints?",
-  "What is the complaint forecast for next year?",
+  "What is the complaint forecast for the next three years?",
   "What share of bulk waste generators do not process waste on site?",
+  "Why is water consumption unusually high in ward K/W?",
+  "Which zones have bins likely to overflow in the next 12 hours?",
+  "When are the traffic peak hours, and where are the accident hotspots?",
 ];
 
 export default async function AssistantPage({ searchParams }: PageProps<"/assistant">) {
@@ -33,6 +37,7 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
   const { data, error } = await supabase.rpc("assistant_history", { p_conversation: c });
   const h = (data as History | null) ?? { conversations: [], messages: [], documents: 0, usage: { used: 0, limit: null } };
   const staff = session.role !== "citizen";
+  const api = apiConfigured();
   const model = llmConfigured();
 
   return (
@@ -50,7 +55,7 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
           <div className="rounded-xl border border-line bg-panel p-5">
             <p className="text-sm text-muted">Try a question:</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {EXAMPLES.map((q) => (
+              {(session.role === "citizen" ? EXAMPLES.slice(0, 4) : EXAMPLES).map((q) => (
                 <form key={q} action={ask}>
                   <input type="hidden" name="question" value={q} />
                   <button type="submit" className="rounded-lg border border-line px-3 py-1.5 text-left text-sm text-ink hover:bg-raised">{q}</button>
@@ -71,7 +76,7 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
                 <li key={i} className="ml-auto max-w-[85%] rounded-xl bg-raised px-4 py-3 text-sm text-ink">{m.content}</li>
               ) : (
                 <li key={i} className="rounded-xl border border-line bg-panel p-5">
-                  <Answer content={m.content} citations={m.citations ?? []} mode={m.mode} />
+                  <Answer content={m.content} citations={m.citations ?? []} mode={m.mode} charts={m.charts ?? []} />
                 </li>
               ),
             )}
@@ -101,7 +106,11 @@ export default async function AssistantPage({ searchParams }: PageProps<"/assist
             <span className="font-medium tabular-nums text-ink">{h.usage.used}</span>
             {h.usage.limit != null ? ` of ${h.usage.limit}` : ""} questions this month
           </p>
-          <p className="mt-1">{model ? "Language model: connected" : "Language model: not configured. Sources are shown directly."}</p>
+          <p className="mt-1">
+            {api
+              ? "CivicOS API: semantic search over documents, with figures, ward profiles and live complaints as tools."
+              : model ? "Language model: connected (keyword search)." : "Language model: not configured. Sources are shown directly."}
+          </p>
           {staff && session.role !== "field_worker" ? (
             <Link href="/assistant/documents" className="mt-3 inline-flex items-center gap-1.5 text-accent hover:underline">
               <FileText className="size-3.5" aria-hidden="true" /> Manage documents

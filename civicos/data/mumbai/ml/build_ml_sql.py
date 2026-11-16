@@ -40,5 +40,5 @@ end $fn$;
 
 revoke all on function app.load_mumbai_models(uuid) from public, anon, authenticated;
 """)
-open(out, "w").write("\n".join(L))
+open(out, "w", newline="\n").write("\n".join(L))
 print("clusters", len(d["clusters"]), "forecasts", len(d["forecasts"]))

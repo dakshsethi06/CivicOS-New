@@ -4,6 +4,7 @@ import { Activity, CheckCircle2, Clock, Droplets, HeartPulse, Hourglass, MapPinn
 import { BarSeriesChart, ChartCard, EmptyChart, LineSeriesChart } from "@/components/dashboard/charts";
 import { AqiGrid, Funnel, HealthIndex, KpiCard, Stat } from "@/components/dashboard/panels";
 import { FilterBar } from "@/components/filter-bar";
+import { OpsStrip, type OpsSummary } from "@/components/ops/ops-strip";
 import { PrintButton } from "@/components/print-button";
 import { requireSession } from "@/lib/auth";
 import { SERIES } from "@/lib/chart-colors";
@@ -20,10 +21,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const filters = parseFilters(await searchParams);
   const supabase = await createClient();
 
-  const [{ data, error }, zones, city] = await Promise.all([
+  const [{ data, error }, zones, city, ops] = await Promise.all([
     supabase.rpc("dashboard_data", { p_year: filters.year, p_zone: filters.zone, p_issue: filters.issue }),
     supabase.from("city_zones").select("id, name").order("code"),
     supabase.from("cities").select("name").limit(1).maybeSingle(),
+    supabase.rpc("ops_summary"),   // null when there is no operations data or the user cannot see it
   ]);
 
   const d = data as DashboardData | null;
@@ -301,10 +303,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         ) : null}
       </div>
 
+      <OpsStrip s={(ops.data ?? null) as OpsSummary} />
+
       <section className="rounded-xl border border-line bg-panel p-5">
         <h2 className="text-sm font-medium">Data sources</h2>
         <p className="mt-1 text-xs text-muted">
-          Every figure on this page was read from the tables below and checked against each table&apos;s own total row. Nothing is estimated or generated.
+          Every published figure on this page was read from the tables below and checked against each table&apos;s own total row. None of them is estimated or generated; the Operations block, when shown, is labelled separately.
         </p>
         <ul className="mt-4 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
           {Object.entries(sources)

@@ -25,10 +25,25 @@ export type Detail = {
     expected_days: number | null; expected_days_basis: string | null; photo_path: string | null;
     created_at: string; assigned_at: string | null; resolved_at: string | null; verified_at: string | null;
     duplicate: { id: string; reference: string; status: Status } | null;
+    // AI analysis (migration 0019); absent before it runs
+    ai_category_id?: string | null; ai_similarity?: number | null; ai_scores?: Record<string, number> | null;
+    ai_duplicates?: AiDuplicate[] | null; image_analysis?: ImageAnalysis | null; ai_model?: string | null; ai_analysed_at?: string | null;
   } | null;
   history: { from: Status | null; to: Status; note: string | null; at: string; actor: string }[];
   staff: { id: string; name: string; role: string }[];
   categories: { id: string; name: string }[];
+};
+
+export type AiDuplicate = { id: string; reference: string; status: Status; category: string | null; same_category?: boolean;
+                            distance_m: number; similarity: number };
+export type ImageAnalysis = {
+  road_damage?: boolean; damage_type?: string; severity?: string; other_issue?: string; matches_description?: boolean | null;
+  summary?: string; model?: string; note?: string; error?: string;
+};
+
+export const CATEGORY_LABEL: Record<string, string> = {
+  road_damage: "Road damage", water_leakage: "Water leakage", garbage_overflow: "Garbage overflow", drainage: "Drainage",
+  streetlight: "Streetlight", sewage: "Sewage", public_infrastructure: "Public infrastructure", other: "Other",
 };
 
 export const when = (iso: string) =>

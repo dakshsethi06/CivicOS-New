@@ -3,6 +3,7 @@ import { Building2, Clock, MessageSquareWarning, Trash2 } from "lucide-react";
 import { BarSeriesChart, ChartCard, EmptyChart, LineSeriesChart } from "@/components/dashboard/charts";
 import { KpiCard } from "@/components/dashboard/panels";
 import { ModuleFilters } from "@/components/module-filters";
+import { SubNav } from "@/components/ops/panels";
 import { requireSession } from "@/lib/auth";
 import { SERIES } from "@/lib/chart-colors";
 import { cite, fmt } from "@/lib/dashboard";
@@ -18,6 +19,7 @@ const METRICS = [
   "bwg_societies", "bwg_giving_waste_to_bmc", "bwg_not_processing_on_site_pct", "slum_population_pct",
 ];
 const SWM = "Solid Waste Management (SWM)";
+const WASTE_VIEWS = [{ href: "/waste", label: "Published figures" }, { href: "/waste/operations", label: "Bins and routes (demo)" }];
 
 export default async function WastePage({ searchParams }: PageProps<"/waste">) {
   await requireSession();
@@ -64,6 +66,7 @@ export default async function WastePage({ searchParams }: PageProps<"/waste">) {
         <h1 className="text-2xl font-semibold tracking-tight">Waste</h1>
         <p className="mt-1 text-sm text-muted">{scope} · {year} · waste lifted, bulk generators and solid-waste complaints from published BMC figures</p>
       </div>
+      <SubNav items={WASTE_VIEWS} active="/waste" />
 
       <ModuleFilters wards={d.wards} ward={filters.zone} years={years} year={year} />
 
@@ -134,7 +137,7 @@ export default async function WastePage({ searchParams }: PageProps<"/waste">) {
       </div>
 
       <p className="rounded-xl border border-line bg-panel p-5 text-xs leading-relaxed text-muted">
-        <span className="font-medium text-ink">What is not here.</span> Bin fill levels, overflow prediction and truck routing need bin sensors and vehicle logs that BMC does not publish, so CivicOS does not show them.
+        <span className="font-medium text-ink">Published figures only.</span> Bin fill levels, overflow prediction and truck routing need bin sensors and vehicle logs that BMC does not publish. The <a href="/waste/operations" className="text-accent hover:underline">Bins and routes</a> view shows those models on a clearly labelled demonstration dataset, kept apart from these figures.
       </p>
     </div>
   );

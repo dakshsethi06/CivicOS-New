@@ -281,7 +281,7 @@ export function CityMap({ data, issue }: { data: MapData; issue: string | null }
         ) : null}
 
         <p className="border-t border-line pt-3 text-xs leading-relaxed text-faint">
-          Ward figures are from Praja Foundation&apos;s reports on BMC data. Individual complaints, bins and meters are not shown because no real location data for them is published.
+          Ward figures are from Praja Foundation&apos;s reports on BMC data. Complaints, pipes, bins, roads and incidents are on the layer map below the ward map.
         </p>
       </aside>
 

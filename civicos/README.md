@@ -2,8 +2,13 @@
 
 **Intelligence for Better Cities.** Urban intelligence platform, built for Mumbai as a multi-tenant SaaS.
 
-**Real data only.** Every figure in the app comes from a published source and carries the report, table and
-page it was read from. CivicOS does not generate, simulate or estimate data.
+**Real data first.** Every published figure in the app comes from a published source and carries the report, table
+and page it was read from. CivicOS does not generate, simulate or estimate published figures.
+
+The one exception is clearly labelled: Mumbai publishes no pipe-network, water-meter, bin-sensor or traffic-detector
+readings, so the sensor-level water, waste and traffic modules run on a **demonstration dataset** that an administrator
+builds on request. It is stored apart from the published figures, flagged `is_synthetic`, and every page that shows it
+says "Demo data". A city can replace it with its own feeds.
 
 | Data | Source |
 | --- | --- |
@@ -16,11 +21,16 @@ page it was read from. CivicOS does not generate, simulate or estimate data.
 `data/mumbai/README.md` explains how the dataset was extracted and checked, and its known quirks.
 
 ```
-apps/web/              Next.js (App Router, TypeScript, Tailwind) -> Vercel
-supabase/migrations/   Postgres schema, RLS policies, Mumbai data  -> Supabase
+apps/web/              Next.js (App Router, TypeScript, Tailwind)              -> Vercel
+apps/api/              Python backend (FastAPI): RAG, assistant, water/waste/traffic models -> Render
+supabase/migrations/   Postgres schema, RLS policies, pgvector, Mumbai data   -> Supabase
 supabase/tests/        Tenant-isolation and data tests (run in CI)
 data/mumbai/           Extraction scripts, extracted tables, and model training (ml/)
+render.yaml            (repository root) Render Blueprint for apps/api
 ```
+
+The web app reads dashboards, maps and complaints from Supabase directly, under Row Level Security. The assistant and
+document ingestion go through `apps/api`, which runs every query as the signed-in user too (see `apps/api/README.md`).
 
 ## Setup
 
@@ -30,6 +40,10 @@ data/mumbai/           Extraction scripts, extracted tables, and model training 
 2. Open **SQL Editor**, paste the whole of `supabase/all_migrations.sql`, and run it once.
    If you ran an earlier version of the migrations in this project, run `supabase/reset.sql` first, and delete
    any users under **Authentication -> Users** so you can register again with the same email.
+   (`all_migrations.sql` is built from `supabase/migrations/` by `python3 supabase/build_all_migrations.py`.)
+   To add the three-year forecasts to a project set up before them, without a reset, run
+   `supabase/migrations/0009_mumbai_models.sql` and then `0016_three_year_forecasts.sql`; for semantic search,
+   `0017_rag_vectors.sql`; for the water, waste and traffic operations modules, `0018_operations.sql`.
 3. Copy the project URL, anon key and service-role key from **Project Settings -> API**.
 
 ### 2. Web app
@@ -50,30 +64,65 @@ To load or reload the dataset for an existing workspace:
 select app.load_mumbai_data(id) from public.organizations;
 ```
 
-### 3. Deploy to Vercel
+### 3. API (assistant and semantic search)
+
+See `apps/api/README.md`. In short: fill in `apps/api/.env` (Supabase connection string and keys, a Gemini API key),
+run `uvicorn app.main:app` or `docker compose up`, and set `CIVICOS_API_URL=http://localhost:8000` in
+`apps/web/.env.local`. Without it the assistant still works, with keyword search.
+
+### 4. Deploy
 
 1. Push this repo to GitHub.
-2. Import it in Vercel and set **Root Directory** to `apps/web`.
-3. Add the same three environment variables.
+2. Web: import it in Vercel, set **Root Directory** to `apps/web`, and add the same environment variables plus
+   `CIVICOS_API_URL`.
+3. API: in Render, New -> Blueprint -> this repository (`render.yaml`), then fill in the secret environment variables.
 
 ## What the app shows
 
 - **Dashboard:** KPIs, complaints per year, issue breakdown, registered against closed, ward comparisons,
-  monthly AQI, waste, water, and a prototype City Health Index. Filters: year, ward, complaint issue.
-- **City Map:** the 24 wards shaded by any of nine published figures or by model ward group.
-- **Water:** supply hours by ward, supply zones by hours, water-quality tests, yield against supply, water complaints.
+  monthly AQI, waste, water, and a prototype City Health Index. Filters: year, ward, complaint issue. When operations
+  data exists, a separate labelled block adds water consumption, predicted infrastructure risks, collection
+  efficiency, congestion and the infrastructure risk distribution.
+- **City Map:** the 24 wards shaded by any of nine published figures or by model ward group, and a layer map with
+  toggles for complaints (real reports), pipes by failure risk, water anomalies, bins, road congestion and incidents.
+- **Water:** supply hours by ward, supply zones by hours, water-quality tests, yield against supply, water complaints,
+  and forecasts to 2028 of unfit drinking-water samples (city and ward) and water supplied.
+  **Network and sensors (demo):** pipe, meter and reservoir map; anomaly detection (Isolation Forest) with officer
+  review; demand forecasts for 24 hours, 7 and 30 days (XGBoost, tested against naive baselines); pipe failure risk
+  with each pipe's contributing factors and a calibration check; reservoir shortage risk.
 - **Waste:** tonnage by ward and year, waste per person, solid-waste complaints and days to close, bulk generators.
-- **Analytics:** ward clustering and 2026 forecasts of complaints, waste lifted (city and ward) and monthly air quality,
-  each tested on past years (details in `data/mumbai/ml/README.md`), a scatter
+  **Bins and routes (demo):** bin map, fill forecasts and overflow probabilities for 6, 12 and 24 hours (XGBoost,
+  calibrated on a held-out week), waste generation, collection efficiency by ward, and collection routes optimised
+  with OR-Tools against the fixed schedule.
+- **Traffic (demo):** road network coloured by congestion now and forecast 15, 30 and 60 minutes ahead (XGBoost,
+  against "no change" and "usual for the time"), peak hours, most congested roads, incident hotspots, and a what-if
+  simulator (close a road, cut its capacity, add trips) using a peak-hour traffic assignment. Simulated, not measured.
+- **Analytics:** ward clustering and 2026–2028 forecasts of complaints, waste lifted (city and ward) and monthly air quality,
+  each tested on past years one, two and three years ahead (details in `data/mumbai/ml/README.md`), a scatter
   plot of any two ward indicators, their correlation matrix, and a flow chart of complaints by issue into closed / not closed.
 - **Complaints:** real reports from real users (see below).
 - **Assistant:** answers questions from uploaded documents and the published figures, with citations (see below).
 - **Insights:** rule-based recommendations with their evidence; officers accept, reject, assign or complete them.
+  Rules cover the published figures and the operations models (water anomalies, pipes at risk, reservoirs, bins about
+  to fill, accident hotspots).
 - **Settings:** team, plan and usage, API keys, audit log. **Platform** (super admin only): all municipalities.
 
 Every chart has a "View data" table with a **Download CSV** button, and a source line. Dashboard and Analytics
 have a **Print or save as PDF** button. Where a figure is not published for the selected
-year or ward, the app says so and leaves it blank. Traffic is off: no ward-level traffic data is published.
+year or ward, the app says so and leaves it blank.
+
+## Operations modules (water, waste, traffic)
+
+1. Run `0018_operations.sql` and start the API (`apps/api`), with `CIVICOS_API_URL` set in the web app.
+2. As City Administrator, open **Water → Network and sensors** and click **Build demo dataset**. In about a minute the
+   API places pipes, meters, reservoirs, bins, trucks and roads inside the real ward boundaries, generates their
+   readings (with leaks, bursts and meter faults injected so the detector can be scored), trains every model, plans
+   tomorrow's collection routes and refreshes the recommendations.
+3. **Retrain models** and the traffic **what-if** simulator are in the Professional plan (switch plans under Settings;
+   test mode). Officers confirm or dismiss water anomalies; the decisions are kept to evaluate the detector.
+
+Each module shows how its models were tested: the held-out period, MAE/RMSE or AUC/Brier, the baselines they are
+compared with, and calibration tables where a probability is shown. Details in `apps/api/README.md`.
 
 ## Complaints
 
@@ -148,14 +197,17 @@ Set `NEXT_PUBLIC_MAP_STYLE_URL` to use another MapLibre style.
 
 City Administrators and Department Officers upload PDF, DOCX, TXT or CSV files (up to 20 MB) under
 **Assistant -> Manage documents**. Text is extracted page by page, split into passages and indexed with
-Postgres full-text search. Scanned PDFs without a text layer cannot be read (no OCR).
+Postgres full-text search, and, when `apps/api` is configured, with Gemini embeddings in pgvector for semantic search
+(see `apps/api/README.md`). Scanned PDFs without a text layer cannot be read (no OCR).
 
 For each question the assistant retrieves matching passages and matching published figures, and answers only from
 those. Every statement carries a marker (`[F1]` figure, `[D2]` document page) that opens the source. If nothing
 relevant is found it says: "The available documents and published figures do not establish this."
 
-- **Without a language model** (default) the answer is the retrieved figures and passages themselves.
-- **With one**, set `LLM_API_KEY` and `LLM_MODEL` (and `LLM_BASE_URL` if not Groq) in `.env.local` and in Vercel.
+- **With `CIVICOS_API_URL` set**, `apps/api` answers with Gemini, choosing between documents, published figures,
+  ward profiles and live complaints. This is the main path.
+- **Without the API or a language model**, the answer is the retrieved figures and passages themselves.
+- **Without the API but with a language model**, set `LLM_API_KEY` and `LLM_MODEL` (and `LLM_BASE_URL` if not Groq) in `.env.local` and in Vercel.
   Any OpenAI-compatible chat API works. The model sees only the retrieved sources; citations are checked in code,
   and a sentence citing a source that does not exist is removed. An answer with no valid citation is discarded.
 
@@ -189,17 +241,22 @@ priority, not a confidence percentage, because they are rules, not statistical e
 
 ## Not built
 
-- **Traffic:** no ward-level traffic data is published for Mumbai. Live traffic needs an API key (for example TomTom)
-  and would build history only from the day collection starts.
-- **Water-leak and bin-overflow prediction:** no Mumbai sensor data is published, so there is nothing real to train on.
-- **Pothole detection on photos**, OCR for scanned documents, and semantic (embedding) search: retrieval is keyword-based.
+- **Real sensor feeds:** the water, waste and traffic modules run on the demonstration dataset until a city connects
+  its own meters, bin sensors and traffic detectors (or a live traffic API such as TomTom, which builds history only
+  from the day collection starts).
+- **Traffic microsimulation:** the what-if model is a macroscopic peak-hour assignment, not SUMO.
+- **Pothole detection on photos** and OCR for scanned documents. Semantic search needs `apps/api` running; without it,
+  retrieval is keyword-based.
 - **Payments:** plan changes are test mode only. **Email invitations:** admins create staff accounts with a temporary password.
 - **Department scoping:** officers see all complaints in their organization, not only their department's.
 - When a user's role changes, their JWT picks it up at the next token refresh (up to an hour) or next sign-in.
 
 ## What has and has not been tested
 
-Tested: the database (schema, tenant isolation, figures against the reports, workflows, limits) on Postgres 16 in CI;
-the web app's pages, document upload and reading, the assistant, API and exports against a local stand-in for Supabase.
-Not yet run against a real Supabase project: sign-up and sign-in, Storage uploads (photos, documents), and a real
-language model. Check these first after setup.
+Tested: the database (schema, tenant isolation, figures against the reports, workflows, limits, operations tables and
+reads, recommendations) on plain Postgres; the backend's models, RAG pipeline and endpoints (pytest); the operations
+jobs end to end (build dataset, train, plan routes, simulate) against that database; the web app's types, lint and
+production build.
+Not yet run against a real Supabase project: sign-up and sign-in, Storage uploads (photos, documents), PostGIS and
+pgvector themselves (tests store geometry as GeoJSON text), a real language model, and the operations pages in a
+browser. Route optimisation with OR-Tools has run only in CI; locally it used the built-in fallback solver.

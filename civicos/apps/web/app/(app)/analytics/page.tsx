@@ -14,13 +14,84 @@ import { requireSession } from "@/lib/auth";
 import { GROUP_COLORS } from "@/lib/chart-colors";
 import { fmt } from "@/lib/dashboard";
 import { parseFilters } from "@/lib/filters";
-import type { ForecastExtras, MlData } from "@/lib/models";
+import { methodsByYear, type ForecastExtras, type MlData, type WardForecast, type YearRange } from "@/lib/models";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Analytics" };
 
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026 to 2028" */
+const spanOf = (years: number[]) => (years.length > 1 ? `${years[0]} to ${years.at(-1)}` : `${years[0] ?? ""}`);
+/** "±14.2% for 2026, ±22% for 2027 and ±22% for 2028" */
+const rangesByYear = (byH: Record<string, number> | undefined, first: number, fallback: number) => {
+  const parts = Object.entries(byH ?? { "1": fallback }).sort(([a], [b]) => Number(a) - Number(b))
+    .map(([h, q]) => `±${q}% for ${first + Number(h) - 1}`);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
+};
+
+/** Forecast figures for the next few years, side by side, nearest first. */
+function YearStats({ forecasts, last, unit }: { forecasts: YearRange[]; last?: { year: number; value: number }; unit?: string }) {
+  return (
+    <div className="flex flex-wrap justify-end gap-x-6 gap-y-2 text-right">
+      {forecasts.map((f) => (
+        <div key={f.year}>
+          <p className="text-xs text-muted">{f.year} forecast</p>
+          <p className="text-2xl font-semibold tabular-nums">{fmt.int(f.value)}{unit ? <span className="text-sm font-normal text-muted"> {unit}</span> : null}</p>
+          <p className="text-xs tabular-nums text-muted">80% range {fmt.int(f.lower)} to {fmt.int(f.upper)}</p>
+        </div>
+      ))}
+      {last ? <p className="basis-full text-xs tabular-nums text-faint">{last.year} published: {fmt.int(last.value)}</p> : null}
+    </div>
+  );
+}
+
+/** One row per ward: latest published figure, each forecast year (range on hover), and the change to the last year. */
+function WardYearsTable({ rows, highlight }: { rows: WardForecast[]; highlight?: string | null }) {
+  const years = rows[0]?.years.map((y) => y.year) ?? [];
+  const lastYear = rows.find((r) => r.last_year != null)?.last_year;
+  return (
+    <div className="max-h-[420px] overflow-auto">
+      <table className="w-full text-left text-xs tabular-nums">
+        <thead className="sticky top-0 bg-panel text-muted">
+          <tr>
+            <th className="py-2 pr-3 font-medium">Ward</th>
+            <th className="py-2 pr-3 text-right font-medium">{lastYear ?? "Last"}</th>
+            {years.map((y) => <th key={y} className="py-2 pr-3 text-right font-medium">{y}</th>)}
+            <th className="py-2 text-right font-medium">Change to {years.at(-1)}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {rows.map((w) => {
+            const end = w.years.at(-1);
+            const ch = w.last && end ? (100 * (end.value - w.last)) / w.last : null;
+            return (
+              <tr key={w.code} className={highlight === w.code ? "bg-accent-soft/60" : ""}>
+                <td className="py-1.5 pr-3 text-ink">{w.name}</td>
+                <td className="py-1.5 pr-3 text-right text-muted">{fmt.int(w.last)}</td>
+                {w.years.map((y, i) => (
+                  <td key={y.year} className={`py-1.5 pr-3 text-right ${i === 0 ? "font-medium text-ink" : "text-ink"}`} title={`80% range ${fmt.int(y.lower)} to ${fmt.int(y.upper)}`}>
+                    {fmt.int(y.value)}
+                  </td>
+                ))}
+                <td className="py-1.5 text-right text-muted">{ch == null ? "—" : `${ch > 0 ? "+" : ""}${ch.toFixed(0)}%`}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const wardTableData = (rows: WardForecast[]) => {
+  const years = rows[0]?.years.map((y) => y.year) ?? [];
+  return {
+    columns: ["Ward", `Published ${rows[0]?.last_year ?? ""}`.trim(), ...years.flatMap((y) => [`${y} forecast`, `${y} low`, `${y} high`])],
+    rows: rows.map((w) => [w.code, w.last, ...w.years.flatMap((y) => [y.value, y.lower, y.upper])]),
+  };
+};
 
 export default async function AnalyticsPage({ searchParams }: PageProps<"/analytics">) {
   await requireSession();
@@ -41,7 +112,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Ward patterns and forecasts</h1>
-        <p className="mt-1 text-sm text-muted">Models trained on the published figures: ward groups and forecasts of complaints, air quality and waste, each tested on past years.</p>
+        <p className="mt-1 text-sm text-muted">Models trained on the published figures: ward groups and three-year forecasts of complaints, air quality and waste, each tested on past years.</p>
       </div>
       <PrintButton />
     </div>
@@ -95,12 +166,16 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
     ...(rest.length ? [{ issue: `Other issues (${rest.length})`, closed: rest.reduce((a, x) => a + x.closed!, 0), open: rest.reduce((a, x) => a + Math.max(0, x.registered - x.closed!), 0) }] : []),
   ];
 
-  const fc = d.forecast;
+  const fcs = d.forecasts ?? [];
+  const fc = fcs[0] ?? null;
+  const fYears = fcs.map((f) => f.year);
   const fam = fc ? fm.params.families[fc.family] : null;
   const last = d.history.at(-1);
   const scope = d.zone ? d.zone.name : "Whole city";
   const families = Object.entries(fm.params.families);
   const methodOrder = ["naive", "mean3", "trend"].filter((m) => m in fm.params.methods);
+  const methodLabel = (k: string) => (k === "naive" ? "Last year" : k === "mean3" ? "3-yr avg" : "Trend");
+  const allYears = fm.params.forecast_years ?? fYears;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -139,33 +214,24 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
         </Link>
       </ChartCard>
 
-      {/* ---------------- forecasts ---------------- */}
+      {/* ---------------- complaint forecasts ---------------- */}
       <ChartCard
-        title={`Complaints registered, 2016 to 2025, and the 2026 forecast: ${scope}${d.issue ? `, ${d.issue}` : ""}`}
-        question="How many complaints should the city plan for next year?"
+        title={`Complaints registered, ${d.history[0]?.year ?? ""} to ${last?.year ?? ""}, and forecasts for ${spanOf(fYears)}: ${scope}${d.issue ? `, ${d.issue}` : ""}`}
+        question="How many complaints should the city plan for over the next three years?"
         note={
           fc && fam
-            ? `Method: ${fm.params.methods[fc.method]}. It had the lowest error when tested on ${fam.backtest_years.join(", ")} across ${fam.series === 1 ? "this one series" : `${fam.series} series in this family`} (${fam.label.toLowerCase()})${fam.series === 1 ? ", only four test forecasts, so treat the choice as tentative" : ""}. In that test, 80% of forecasts were within ±${fam.interval_pct}% of the real figure, which sets the range shown.`
+            ? `Methods: ${methodsByYear(fam.chosen_by_horizon, fc.year, fam.chosen)}. Each had the lowest error at that distance when ${fam.backtest_years.join(", ")} were forecast from 1, 2 and 3 years earlier, across ${fam.series === 1 ? "this one series" : `${fam.series} series in this family`} (${fam.label.toLowerCase()})${fam.series === 1 ? ", only four test forecasts per distance, so treat the choice as tentative" : ""}. In those tests 80% of forecasts were within ${rangesByYear(fam.interval_pct_by_horizon, fc.year, fam.interval_pct)} of the real figure, which sets the ranges shown.`
             : undefined
         }
         source={`Trained on ${fm.trained_on}.`}
-        table={{ columns: ["Year", "Complaints"], rows: [...d.history.map((h) => [h.year, h.value] as (string | number)[]), ...(fc ? [[`${fc.year} (forecast)`, `${fmt.int(fc.value)} (${fmt.int(fc.lower)} to ${fmt.int(fc.upper)})`]] : [])] }}
+        table={{ columns: ["Year", "Complaints"], rows: [...d.history.map((h) => [h.year, h.value] as (string | number)[]), ...fcs.map((f) => [`${f.year} (forecast)`, `${fmt.int(f.value)} (${fmt.int(f.lower)} to ${fmt.int(f.upper)})`])] }}
       >
         <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
           <SeriesPicker zone={filters.zone} issue={filters.issue} wards={zones.data ?? []} cityIssues={d.issues_with_forecasts} wardIssues={d.ward_issues} />
-          {fc ? (
-            <div className="text-right">
-              <p className="text-xs text-muted">2026 forecast</p>
-              <p className="text-2xl font-semibold tabular-nums">{fmt.int(fc.value)}</p>
-              <p className="text-xs tabular-nums text-muted">
-                80% range {fmt.int(fc.lower)} to {fmt.int(fc.upper)}
-                {last ? ` · ${last.year}: ${fmt.int(last.value)}` : ""}
-              </p>
-            </div>
-          ) : null}
+          {fcs.length ? <YearStats forecasts={fcs} last={last} /> : null}
         </div>
         {d.history.length ? (
-          <ForecastChart history={d.history} forecast={fc} />
+          <ForecastChart history={d.history} forecasts={fcs} />
         ) : (
           <p className="py-10 text-center text-sm text-faint">No published series for this ward and issue.</p>
         )}
@@ -174,150 +240,141 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
           title="How accurate were the forecasts?"
-          question="Does the chosen method beat simply repeating last year's figure?"
-          note="Average error as a share of the real figure (MAPE), forecasting each of 2022 to 2025 from the years before it. Lower is better. Where last year's value wins, it is the method used: a fancier method would be worse."
+          question="Does the chosen method beat simply repeating last year's figure, and how fast does accuracy fall with distance?"
+          note="Average error as a share of the real figure (MAPE), forecasting each of 2022 to 2025 one year ahead from the years before it. Lower is better. The right-hand columns repeat the test two and three years ahead for the method used in those years, and give each year's 80% range."
         >
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[460px] text-left text-xs tabular-nums">
+            <table className="w-full min-w-[560px] text-left text-xs tabular-nums">
               <thead className="text-muted">
                 <tr>
                   <th className="py-2 pr-3 font-medium">Series</th>
                   {methodOrder.map((k) => (
-                    <th key={k} className="py-2 pr-3 text-right font-medium" title={fm.params.methods[k]}>
-                      {k === "naive" ? "Last year" : k === "mean3" ? "3-yr avg" : "Trend"}
-                    </th>
+                    <th key={k} className="py-2 pr-3 text-right font-medium" title={fm.params.methods[k]}>{methodLabel(k)}</th>
                   ))}
-                  <th className="py-2 text-right font-medium">80% range</th>
+                  <th className="py-2 pr-3 text-right font-medium">2 / 3 yrs ahead</th>
+                  <th className="py-2 text-right font-medium">80% range by year</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {families.map(([key, f]) => (
-                  <tr key={key}>
-                    <td className="py-2 pr-3 text-ink">
-                      {f.label}
-                      <span className="block text-faint">{f.series} series × {f.backtest_years.length} test years</span>
-                    </td>
-                    {methodOrder.map((m) => (
-                      <td key={m} className={`py-2 pr-3 text-right ${m === f.chosen ? "font-semibold text-accent" : "text-muted"}`}>
-                        {f.mape_pct[m].toFixed(1)}%
+                {families.map(([key, f]) => {
+                  const byH = f.chosen_by_horizon ?? {};
+                  const ahead = ["2", "3"].map((h) => (byH[h] && f.mape_pct_by_horizon?.[h] ? `${f.mape_pct_by_horizon[h][byH[h]].toFixed(1)}%` : "—"));
+                  const ranges = Object.values(f.interval_pct_by_horizon ?? { "1": f.interval_pct });
+                  return (
+                    <tr key={key}>
+                      <td className="py-2 pr-3 text-ink">
+                        {f.label}
+                        <span className="block text-faint">{f.series} series × {f.backtest_years.length} test years</span>
+                        {f.chosen_by_horizon ? <span className="block text-faint">Used: {methodsByYear(f.chosen_by_horizon, allYears[0], f.chosen)}</span> : null}
                       </td>
-                    ))}
-                    <td className="py-2 text-right text-muted">±{f.interval_pct}%</td>
-                  </tr>
-                ))}
+                      {methodOrder.map((m) => (
+                        <td key={m} className={`py-2 pr-3 text-right ${m === f.chosen ? "font-semibold text-accent" : "text-muted"}`}>
+                          {f.mape_pct[m].toFixed(1)}%
+                        </td>
+                      ))}
+                      <td className="py-2 pr-3 text-right text-muted">{ahead.join(" / ")}</td>
+                      <td className="py-2 text-right text-muted">{ranges.map((q) => `±${q}%`).join(" / ")}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-muted">The chosen method for each series is highlighted.</p>
+          <p className="mt-3 text-xs text-muted">The method used one year ahead is highlighted. A straight-line trend often wins one year ahead and then drifts, so further years may use a steadier method.</p>
         </ChartCard>
 
         <ChartCard
-          title={`2026 forecast by ward${d.issue ? `, ${d.issue}` : ""}`}
-          question="Which wards should expect more complaints next year?"
-          note={d.ward_forecasts.length ? undefined : "Ward forecasts exist for all issues together, solid waste and drainage only."}
+          title={`Forecast by ward, ${spanOf(allYears)}${d.issue ? `, ${d.issue}` : ""}`}
+          question="Which wards should expect more complaints in the next three years?"
+          note={d.ward_forecasts.length ? "Hover a figure for its 80% range. Change compares the last forecast year with the latest published year." : "Ward forecasts exist for all issues together, solid waste and drainage only."}
+          table={d.ward_forecasts.length ? wardTableData(d.ward_forecasts) : undefined}
         >
-          {d.ward_forecasts.length ? (
-            <div className="max-h-[420px] overflow-auto">
-              <table className="w-full text-left text-xs tabular-nums">
-                <thead className="sticky top-0 bg-panel text-muted">
-                  <tr>
-                    <th className="py-2 pr-3 font-medium">Ward</th>
-                    <th className="py-2 pr-3 text-right font-medium">2025</th>
-                    <th className="py-2 pr-3 text-right font-medium">2026 forecast</th>
-                    <th className="py-2 pr-3 text-right font-medium">80% range</th>
-                    <th className="py-2 text-right font-medium">Change</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {d.ward_forecasts.map((w) => {
-                    const ch = w.last ? (100 * (w.value - w.last)) / w.last : null;
-                    return (
-                      <tr key={w.code}>
-                        <td className="py-1.5 pr-3 text-ink">{w.name}</td>
-                        <td className="py-1.5 pr-3 text-right text-muted">{fmt.int(w.last)}</td>
-                        <td className="py-1.5 pr-3 text-right font-medium text-ink">{fmt.int(w.value)}</td>
-                        <td className="py-1.5 pr-3 text-right text-muted">{fmt.int(w.lower)} to {fmt.int(w.upper)}</td>
-                        <td className="py-1.5 text-right text-muted">{ch == null ? "—" : `${ch > 0 ? "+" : ""}${ch.toFixed(0)}%`}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
+          {d.ward_forecasts.length ? <WardYearsTable rows={d.ward_forecasts} highlight={d.zone?.code} /> : null}
         </ChartCard>
       </div>
 
       {/* ---------------- air quality forecast ---------------- */}
       {ex?.aqi.model && ex.aqi.forecast.length ? (() => {
         const am = ex.aqi.model, ap = am.params;
-        const fcs = ex.aqi.forecast;
-        const worst = fcs.reduce((a, b) => (b.value > a.value ? b : a));
-        const best = fcs.reduce((a, b) => (b.value < a.value ? b : a));
-        const above = fcs.filter((f) => f.value > 100);
-        const prev = ex.aqi.history.filter((h) => h.year === fcs[0].year - 1);
+        const all = ex.aqi.forecast;
+        const years = [...new Set(all.map((f) => f.year))].sort((a, b) => a - b);
+        const next = all.filter((f) => f.year === years[0]);
+        const worst = next.reduce((a, b) => (b.value > a.value ? b : a));
+        const best = next.reduce((a, b) => (b.value < a.value ? b : a));
+        const above = next.filter((f) => f.value > 100);
+        const prev = ex.aqi.history.filter((h) => h.year === years[0] - 1);
         const prevAvg = prev.reduce((a, h) => a + h.value, 0) / (prev.length || 1);
-        const avg = fcs.reduce((a, f) => a + f.value, 0) / fcs.length;
+        const avgOf = (y: number) => { const m = all.filter((f) => f.year === y); return m.reduce((a, f) => a + f.value, 0) / (m.length || 1); };
         const src = ex.aqi.source;
         const aOrder = ["snaive", "smean3", "climatology", "profile"].filter((k) => k in ap.methods);
+        const horizons = Object.keys(ap.mape_pct_by_horizon ?? { "1": ap.mape_pct }).sort();
+        const chosenAt = (h: string) => ap.chosen_by_horizon?.[h] ?? ap.chosen;
         return (
           <div className="grid gap-4 lg:grid-cols-3">
             <ChartCard
               className="lg:col-span-2"
-              title={`${am.name}: Mumbai's monthly AQI, ${fcs[0].year}`}
-              question="Which months of next year will have the worst air?"
-              note={`Method: ${ap.methods[ap.chosen]}. 80% of test forecasts were within ±${ap.interval_pct}% of the published figure, which sets the range. The history includes 2020, the lockdown year.`}
+              title={`${am.name}: Mumbai's monthly AQI, ${spanOf(years)}`}
+              question="Which months of the next three years will have the worst air?"
+              note={`Methods: ${methodsByYear(ap.chosen_by_horizon, years[0], ap.chosen)}. Each held up best at that distance in tests on ${ap.backtest_years.join(", ")}. 80% of those test forecasts were within ${rangesByYear(ap.interval_pct_by_horizon, years[0], ap.interval_pct)} of the published figure, which sets the ranges. The history includes 2020, the lockdown year.`}
               source={`${src ? `Source: ${src.publisher}, ${src.table}, p. ${src.page}. ` : ""}Trained on ${am.trained_on}.`}
-              table={{ columns: ["Month", "Forecast AQI", "80% range low", "80% range high"], rows: fcs.map((f) => [`${MONTHS_LONG[f.month - 1]} ${f.year}`, f.value, f.lower ?? null, f.upper ?? null]) }}
+              table={{ columns: ["Month", "Forecast AQI", "80% range low", "80% range high"], rows: all.map((f) => [`${MONTHS_LONG[f.month - 1]} ${f.year}`, f.value, f.lower ?? null, f.upper ?? null]) }}
             >
-              <AqiForecast history={ex.aqi.history} forecast={fcs} params={ap} />
+              <AqiForecast history={ex.aqi.history} forecast={all} params={ap} />
             </ChartCard>
 
             <div className="stagger grid content-start gap-4">
               <div className="card-hover rounded-xl border border-line bg-panel p-4">
-                <p className="text-xs text-muted">Worst month forecast</p>
+                <p className="text-xs text-muted">Worst month forecast, {years[0]}</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">{MONTHS_LONG[worst.month - 1]} · {worst.value}</p>
                 <p className="mt-1 text-xs text-faint">80% range {worst.lower} to {worst.upper}</p>
               </div>
               <div className="card-hover rounded-xl border border-line bg-panel p-4">
-                <p className="text-xs text-muted">Cleanest month forecast</p>
+                <p className="text-xs text-muted">Cleanest month forecast, {years[0]}</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">{MONTHS_LONG[best.month - 1]} · {best.value}</p>
                 <p className="mt-1 text-xs text-faint">Monsoon rain clears the air</p>
               </div>
               <div className="card-hover rounded-xl border border-line bg-panel p-4">
-                <p className="text-xs text-muted">Months above 100</p>
+                <p className="text-xs text-muted">Months above 100, {years[0]}</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums">{above.length} <span className="text-sm font-normal text-muted">of 12</span></p>
                 <p className="mt-1 text-xs text-faint">{above.map((f) => MONTHS_SHORT[f.month - 1]).join(", ") || "None"}</p>
               </div>
               <div className="card-hover rounded-xl border border-line bg-panel p-4">
-                <p className="text-xs text-muted">Year average</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{avg.toFixed(0)}</p>
-                <p className="mt-1 text-xs text-faint">{fcs[0].year - 1}: {prevAvg.toFixed(0)} published</p>
+                <p className="text-xs text-muted">Year average forecast</p>
+                <div className="mt-1 flex flex-wrap gap-x-4">
+                  {years.map((y) => (
+                    <p key={y} className="tabular-nums"><span className="text-2xl font-semibold">{avgOf(y).toFixed(0)}</span> <span className="text-xs text-muted">{y}</span></p>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-faint">{years[0] - 1}: {prevAvg.toFixed(0)} published</p>
               </div>
             </div>
 
             <ChartCard
               className="lg:col-span-3"
               title="How accurate was each air-quality method?"
-              question="Does following the seasonal cycle beat repeating last year's month?"
-              note={`Each method forecast all twelve months of ${ap.backtest_years.join(", ")} using only the years before. Error is the average miss as a share of the real figure (MAPE) and in AQI points (MAE). Lower is better.`}
+              question="Does following the seasonal cycle beat repeating last year's month, and which method holds up further ahead?"
+              note={`Each method forecast all twelve months of ${ap.backtest_years.join(", ")} using only the years up to 1, 2 or 3 years before. Error is the average miss as a share of the real figure (MAPE); the AQI-points column is one year ahead. Lower is better. The method used for each distance is highlighted.`}
             >
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-xs tabular-nums">
+                <table className="w-full min-w-[620px] text-left text-xs tabular-nums">
                   <thead className="text-muted">
                     <tr>
                       <th className="py-2 pr-3 font-medium">Method</th>
-                      <th className="py-2 pr-3 text-right font-medium">Average miss, %</th>
+                      {horizons.map((h) => (
+                        <th key={h} className="py-2 pr-3 text-right font-medium">{h === "1" ? "1 year ahead" : `${h} years ahead`}{` (${years[0] + Number(h) - 1})`}</th>
+                      ))}
                       <th className="py-2 text-right font-medium">Average miss, AQI points</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
                     {aOrder.map((k) => (
-                      <tr key={k} className={k === ap.chosen ? "bg-accent-soft/60" : ""}>
-                        <td className={`py-2 pr-3 ${k === ap.chosen ? "font-semibold text-accent" : "text-ink"}`}>
-                          {ap.methods[k]}{k === ap.chosen ? " (used)" : k === ap.naive ? " (baseline)" : ""}
-                        </td>
-                        <td className={`py-2 pr-3 text-right ${k === ap.chosen ? "font-semibold text-accent" : "text-muted"}`}>{ap.mape_pct[k].toFixed(1)}%</td>
+                      <tr key={k}>
+                        <td className="py-2 pr-3 text-ink">{ap.methods[k]}{k === ap.naive ? " (baseline)" : ""}</td>
+                        {horizons.map((h) => {
+                          const v = ap.mape_pct_by_horizon?.[h]?.[k] ?? ap.mape_pct[k];
+                          const used = chosenAt(h) === k;
+                          return <td key={h} className={`py-2 pr-3 text-right ${used ? "font-semibold text-accent" : "text-muted"}`}>{v.toFixed(1)}%{used ? " ✓" : ""}</td>;
+                        })}
                         <td className={`py-2 text-right ${k === ap.chosen ? "font-semibold text-accent" : "text-muted"}`}>{ap.mae[k].toFixed(1)}</td>
                       </tr>
                     ))}
@@ -325,7 +382,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
                 </table>
               </div>
               <p className="mt-3 text-xs text-muted">
-                The chosen method misses by {((100 * (ap.mape_pct[ap.naive] - ap.mape_pct[ap.chosen])) / ap.mape_pct[ap.naive]).toFixed(0)}% less than repeating last year&apos;s month. Use the “Test” tabs on the chart to see each test year.
+                One year ahead, the chosen method misses by {((100 * (ap.mape_pct[ap.naive] - ap.mape_pct[ap.chosen])) / ap.mape_pct[ap.naive]).toFixed(0)}% less than repeating last year&apos;s month. Use the “Test” tabs on the chart to see each test year.
               </p>
             </ChartCard>
           </div>
@@ -333,61 +390,37 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
       })() : null}
 
       {/* ---------------- waste forecast ---------------- */}
-      {ex?.waste.model && ex.waste.forecast ? (() => {
-        const wm = ex.waste.model, wf = ex.waste.forecast;
+      {ex?.waste.model && ex.waste.forecasts?.length ? (() => {
+        const wm = ex.waste.model, wfs = ex.waste.forecasts, wf = wfs[0];
         const wfam = wm.params.families[wf.family];
         const wlast = ex.waste.history[ex.waste.history.length - 1];
         const wardFam = wm.params.families.ward_waste;
         const src = ex.waste.source;
         const wscope = ex.zone ? ex.zone.name : "Whole city";
+        const wYears = wfs.map((f) => f.year);
         return (
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard
-              title={`${wm.name}: waste lifted per day, ${wscope}`}
-              question="How much waste will need collecting each day next year?"
-              note={wfam ? `Method: ${wm.params.methods[wf.method]}, the lowest error when tested on ${wfam.backtest_years.join(" and ")} (${wfam.mape_pct[wfam.chosen].toFixed(1)}% average miss). Only five years are published, so the test is short; the 80% range is ±${wfam.interval_pct}%.${wf.family === "city_waste" ? " The city range uses the wider ward-level error because one series gives only two test errors." : ""} Choose a ward with the ward filter in the complaint forecast above.` : undefined}
+              title={`${wm.name}: waste lifted per day, ${wscope}, to ${wYears.at(-1)}`}
+              question="How much waste will need collecting each day over the next three years?"
+              note={wfam ? `Method: ${methodsByYear(wfam.chosen_by_horizon, wf.year, wfam.chosen)}, the lowest error when tested one year ahead on ${wfam.backtest_years.join(" and ")} (${wfam.mape_pct[wfam.chosen].toFixed(1)}% average miss). Only five years are published, so 2027 and 2028 could not be tested: their ranges are the one-year range widened with distance (${rangesByYear(wfam.interval_pct_by_horizon, wf.year, wfam.interval_pct)}).${wf.family === "city_waste" ? " The city range uses the wider ward-level error because one series gives only two test errors." : ""} Choose a ward with the ward filter in the complaint forecast above.` : undefined}
               source={`${src ? `Source: ${src.publisher}, ${src.table}, p. ${src.page}. ` : ""}Trained on ${wm.trained_on}.`}
-              table={{ columns: ["Year", "Tonnes per day"], rows: [...ex.waste.history.map((h) => [h.year, h.value] as (string | number)[]), [`${wf.year} (forecast)`, `${fmt.int(wf.value)} (${fmt.int(wf.lower)} to ${fmt.int(wf.upper)})`]] }}
+              table={{ columns: ["Year", "Tonnes per day"], rows: [...ex.waste.history.map((h) => [h.year, h.value] as (string | number)[]), ...wfs.map((f) => [`${f.year} (forecast)`, `${fmt.int(f.value)} (${fmt.int(f.lower)} to ${fmt.int(f.upper)})`])] }}
             >
-              <div className="mb-3 flex items-end justify-between gap-4">
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
                 <p className="text-xs text-muted">Tonnes per day</p>
-                <div className="text-right">
-                  <p className="text-xs text-muted">{wf.year} forecast</p>
-                  <p className="text-2xl font-semibold tabular-nums">{fmt.int(wf.value)} <span className="text-sm font-normal text-muted">t/day</span></p>
-                  <p className="text-xs tabular-nums text-muted">80% range {fmt.int(wf.lower)} to {fmt.int(wf.upper)}{wlast ? ` · ${wlast.year}: ${fmt.int(wlast.value)}` : ""}</p>
-                </div>
+                <YearStats forecasts={wfs} last={wlast} unit="t/day" />
               </div>
-              <ForecastChart history={ex.waste.history} forecast={wf} />
+              <ForecastChart history={ex.waste.history} forecasts={wfs} />
             </ChartCard>
 
             <ChartCard
-              title={`${wf.year} waste forecast by ward`}
+              title={`Waste forecast by ward, ${spanOf(wYears)}`}
               question="How much should each ward plan to collect?"
-              note={wardFam?.chosen === "naive" ? `For single wards, repeating last year's figure was the most accurate method (${wardFam.mape_pct.naive.toFixed(1)}% average miss, against ${wardFam.mape_pct.trend.toFixed(1)}% for the trend), so each ward's forecast equals its ${wlast?.year ?? "latest"} figure. The useful part is the range: plan for the high end.` : undefined}
-              table={{ columns: ["Ward", "Last year", "Forecast", "Low", "High"], rows: ex.waste.ward_forecasts.map((w) => [w.code, w.last, w.value, w.lower, w.upper]) }}
+              note={wardFam?.chosen === "naive" ? `For single wards, repeating last year's figure was the most accurate method (${wardFam.mape_pct.naive.toFixed(1)}% average miss, against ${wardFam.mape_pct.trend.toFixed(1)}% for the trend), so each ward's forecast equals its ${wlast?.year ?? "latest"} figure in every year. The useful part is the range, which widens each year (hover a figure): plan for the high end.` : undefined}
+              table={wardTableData(ex.waste.ward_forecasts)}
             >
-              <div className="max-h-[420px] overflow-auto">
-                <table className="w-full text-left text-xs tabular-nums">
-                  <thead className="sticky top-0 bg-panel text-muted">
-                    <tr>
-                      <th className="py-2 pr-3 font-medium">Ward</th>
-                      <th className="py-2 pr-3 text-right font-medium">{wlast?.year ?? "Last"}</th>
-                      <th className="py-2 pr-3 text-right font-medium">{wf.year} forecast</th>
-                      <th className="py-2 text-right font-medium">80% range</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {ex.waste.ward_forecasts.map((w) => (
-                      <tr key={w.code} className={ex.zone?.code === w.code ? "bg-accent-soft/60" : ""}>
-                        <td className="py-1.5 pr-3 text-ink">{w.name}</td>
-                        <td className="py-1.5 pr-3 text-right text-muted">{fmt.int(w.last)}</td>
-                        <td className="py-1.5 pr-3 text-right font-medium text-ink">{fmt.int(w.value)}</td>
-                        <td className="py-1.5 text-right text-muted">{fmt.int(w.lower)} to {fmt.int(w.upper)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <WardYearsTable rows={ex.waste.ward_forecasts} highlight={ex.zone?.code} />
             </ChartCard>
           </div>
         );
@@ -459,9 +492,10 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
         <h2 className="text-sm font-medium text-ink">Limits of these models</h2>
         <ul className="mt-2 list-disc space-y-1 pl-4">
           <li>Each complaint series has ten yearly figures, and 2020 and 2021 are pandemic years. That is too little history for anything more complex than the three methods compared here.</li>
-          <li>Waste has only five published years per ward, so its methods were tested on two years. Air quality has 120 months, but only city-wide: there is no monthly AQI by ward to forecast.</li>
+          <li>The further ahead, the less reliable: the ranges for {allYears.at(-1)} come from three-years-ahead tests and are wider for that reason. Treat {allYears.at(-1)} figures as a planning range, not a target.</li>
+          <li>Waste has only five published years per ward, so only one-year-ahead forecasts could be tested; the 2027 and 2028 waste ranges are widened from that test rather than measured. Air quality has 120 months, but only city-wide: there is no monthly AQI by ward to forecast.</li>
           <li>The air-quality forecast follows the usual seasonal cycle. It cannot foresee an unusual year (a weak monsoon, a festival season with heavy firecracker use, a construction boom).</li>
-          <li>The forecasts assume next year behaves like the recent past. A one-off event, such as ward S&apos;s jump from 6,221 complaints in 2024 to 13,116 in 2025, will not be predicted and is only partly carried forward.</li>
+          <li>The forecasts assume the coming years behave like the recent past. A one-off event, such as ward S&apos;s jump from 6,221 complaints in 2024 to 13,116 in 2025, will not be predicted and is only partly carried forward.</li>
           <li>Ward groups describe 2025 (water 2024) and depend on which indicators are included. They show patterns, not causes.</li>
           <li>All models were trained on {fm.trained_at} from the published figures only. Retrain them when a new annual report is loaded.</li>
         </ul>

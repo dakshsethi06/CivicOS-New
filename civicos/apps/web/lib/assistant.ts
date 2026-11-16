@@ -2,7 +2,7 @@ export type Fact = { text: string; source: string };
 export type ChunkHit = { chunk_id: number; document_id: string; title: string; category: string; source: string | null; page: number | null; content: string; excerpt: string; coverage: number };
 export type Citation =
   | { id: string; kind: "figure"; text: string; source: string }
-  | { id: string; kind: "document"; title: string; page: number | null; excerpt: string; document_id: string };
+  | { id: string; kind: "document"; title: string; page: number | null; excerpt: string; document_id: string; section?: string | null; category?: string | null };
 export type Mode = "llm" | "extractive" | "none";
 
 export const NOT_ESTABLISHED = "The available documents and published figures do not establish this.";

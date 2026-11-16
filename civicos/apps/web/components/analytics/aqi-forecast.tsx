@@ -20,14 +20,17 @@ function band(v: number) {
 }
 
 /**
- * The last two published years of monthly AQI as a solid line, then each month of 2026 as a dashed line inside its
+ * The last published years of monthly AQI as a solid line, then each forecast month as a dashed line inside its
  * 80% range. A second view replays the backtest: what the method would have said for a past year against what happened.
  */
 export function AqiForecast({ history, forecast, params }: { history: MonthPoint[]; forecast: MonthPoint[]; params: AqiParams }) {
   const [view, setView] = useState<"forecast" | number>("forecast");
   const lastYear = Math.max(...history.map((h) => h.year));
   const firstYear = Math.min(...history.map((h) => h.year));
-  const shown = history.filter((h) => h.year >= lastYear - 1);
+  const fYears = [...new Set(forecast.map((f) => f.year))].sort((a, b) => a - b);
+  const span = fYears.length > 1 ? `${fYears[0]}–${fYears.at(-1)}` : `${fYears[0] ?? ""}`;
+  // keep roughly two years of history beside one forecast year, and one year beside several
+  const shown = history.filter((h) => h.year >= lastYear - (fYears.length > 1 ? 0 : 1));
 
   const rows: Row[] = shown.map((h) => ({
     key: `${h.year}-${h.month}`, label: `${MONTHS[h.month - 1]} ${String(h.year).slice(2)}`, actual: h.value, forecast: null, band: null,
@@ -55,7 +58,7 @@ export function AqiForecast({ history, forecast, params }: { history: MonthPoint
         <div role="tablist" aria-label="Chart view" className="inline-flex rounded-lg border border-line bg-raised p-0.5 text-xs">
           <button role="tab" aria-selected={view === "forecast"} onClick={() => setView("forecast")}
             className={`rounded-md px-3 py-1.5 ${view === "forecast" ? "bg-panel font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
-            2026 forecast
+            {span} forecast
           </button>
           {params.backtest.map((b) => (
             <button key={b.year} role="tab" aria-selected={view === b.year} onClick={() => setView(b.year)}
@@ -90,7 +93,7 @@ export function AqiForecast({ history, forecast, params }: { history: MonthPoint
             <ComposedChart key="fc" data={rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="var(--color-line)" vertical={false} />
               {firstForecast && lastKey ? <ReferenceArea x1={rows.find((r) => r.key === firstForecast)?.label} x2={rows[rows.length - 1].label} fill="var(--color-raised)" fillOpacity={0.7} /> : null}
-              <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={{ stroke: "var(--color-line)" }} interval={2} />
+              <XAxis dataKey="label" tick={tick} tickLine={false} axisLine={{ stroke: "var(--color-line)" }} interval={rows.length > 30 ? 5 : 2} />
               <YAxis tick={tick} tickLine={false} axisLine={false} width={40} domain={[0, 220]} ticks={[0, 50, 100, 150, 200]} />
               <ReferenceLine y={100} stroke="var(--color-faint)" strokeDasharray="2 4" />
               <Tooltip content={<Tip />} cursor={{ stroke: "var(--color-faint)", strokeWidth: 1 }} />
@@ -104,7 +107,7 @@ export function AqiForecast({ history, forecast, params }: { history: MonthPoint
       <p className="mt-2 text-xs text-muted">
         {bt
           ? `Forecast for ${bt.year} made only from ${firstYear} to ${bt.year - 1}, against what was published. Average miss: ${bt.mae} AQI points.`
-          : "Shaded area: 2026, the forecast period. Lower AQI is cleaner air."}{" "}
+          : `Shaded area: ${span}, the forecast period. Lower AQI is cleaner air.`}{" "}
         Dotted line: AQI 100, the upper limit of “Satisfactory”.
       </p>
     </div>

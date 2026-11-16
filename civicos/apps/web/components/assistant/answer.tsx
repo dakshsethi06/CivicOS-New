@@ -1,4 +1,7 @@
+import { AnswerCharts, type AnswerChart } from "@/components/assistant/answer-charts";
 import type { Citation, Mode } from "@/lib/assistant";
+
+export type { AnswerChart };
 
 const MODE_NOTE: Record<Mode, string> = {
   llm: "Written by the language model using only the sources below. Citations were checked against them.",
@@ -6,8 +9,8 @@ const MODE_NOTE: Record<Mode, string> = {
   none: "Nothing relevant was found in the uploaded documents or the published figures.",
 };
 
-/** An assistant answer: text with citation chips, then the cited sources. */
-export function Answer({ content, citations, mode }: { content: string; citations: Citation[]; mode: Mode | null }) {
+/** An assistant answer: text with citation chips, any charts of the cited figures, then the cited sources. */
+export function Answer({ content, citations, mode, charts = [] }: { content: string; citations: Citation[]; mode: Mode | null; charts?: AnswerChart[] }) {
   const parts = content.split(/(\[[FD]\d+\])/g);
   return (
     <div>
@@ -23,6 +26,7 @@ export function Answer({ content, citations, mode }: { content: string; citation
           );
         })}
       </div>
+      {charts.length ? <AnswerCharts charts={charts} /> : null}
       {mode ? <p className="mt-3 text-xs text-faint">{MODE_NOTE[mode]}</p> : null}
       {citations.length ? (
         <ol className="mt-3 space-y-2 border-t border-line pt-3">
@@ -36,10 +40,17 @@ export function Answer({ content, citations, mode }: { content: string; citation
                 </span>
               ) : (
                 <span>
-                  <span className="text-ink">
+                  <a
+                    href={`/assistant/documents/${c.document_id}/open${c.page ? `?page=${c.page}` : ""}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-ink underline decoration-line underline-offset-2 hover:decoration-accent"
+                    title="Open the source document"
+                  >
                     {c.title}
                     {c.page ? `, page ${c.page}` : ""}
-                  </span>
+                  </a>
+                  {c.section ? <span className="text-faint"> · {c.section}</span> : null}
                   <span className="mt-0.5 block leading-relaxed text-muted">
                     …{c.excerpt.split(/[«»]/).map((s, i) => (i % 2 ? <mark key={i} className="bg-transparent font-medium text-ink">{s}</mark> : <span key={i}>{s}</span>))}…
                   </span>
