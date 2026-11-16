@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* CivicOS light palette: cool off-white page, white cards, slate text, one teal accent */
+  --color-base: #f5f7fa;      /* page background */
+  --color-panel: #ffffff;     /* cards, sidebar */
+  --color-raised: #f0f3f7;    /* hover, inputs */
+  --color-line: #e2e7ee;      /* borders */
+  --color-ink: #111827;       /* primary text */
+  --color-muted: #5b6577;     /* secondary text (5.9:1 on white) */
+  --color-faint: #8a93a3;     /* tertiary text */
+  --color-accent: #0d8f78;    /* single restrained accent (4.6:1 on white) */
+  --color-accent-soft: #e6f6f2;
+  --color-accent-ink: #ffffff;
+  --color-warn: #b26b00;
+  --color-danger: #c93636;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-base);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Chart tokens (light-mode steps of the validated palette, white panel surface).
+   Categorical slots are used in fixed order; status colours are reserved for state. */
+@theme inline {
+  --color-series-1: #2a78d6;  /* blue   */
+  --color-series-2: #eb6834;  /* orange */
+  --color-series-3: #1baf7a;  /* aqua   */
+  --color-status-good: #0ca30c;
+  --color-status-warning: #fab219;
+  --color-status-serious: #ec835a;
+  --color-status-critical: #d03b3b;
+}
+
+.maplibregl-popup-content {
+  background: var(--color-panel) !important;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px -8px rgba(17, 24, 39, 0.18);
+  padding: 12px 14px !important;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 280px;
+}
+.maplibregl-popup-tip { border-top-color: var(--color-panel) !important; border-bottom-color: var(--color-panel) !important; }
+.maplibregl-popup-close-button { color: var(--color-muted); font-size: 16px; padding: 2px 6px; }
+.maplibregl-ctrl-attrib { background: rgba(255, 255, 255, 0.85) !important; color: var(--color-muted); }
+.maplibregl-ctrl-attrib a { color: var(--color-muted) !important; }
+
+/* Print / save as PDF: keep chart colours as drawn and drop the navigation chrome. */
+@media print {
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  @page { margin: 12mm; }
+  section, li { break-inside: avoid; }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion. Short and calm: content rises in, cards lift on hover, loading shimmers.
+   Everything is switched off for people who ask their system for reduced motion.
+   --------------------------------------------------------------------------- */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* page content: each top-level block of the page rises in, one after another */
+.page-enter-flat > *,
+.page-enter > * > * {
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-enter-flat > *:nth-child(2), .page-enter > * > *:nth-child(2) { animation-delay: 40ms; }
+.page-enter-flat > *:nth-child(3), .page-enter > * > *:nth-child(3) { animation-delay: 80ms; }
+.page-enter-flat > *:nth-child(4), .page-enter > * > *:nth-child(4) { animation-delay: 120ms; }
+.page-enter-flat > *:nth-child(5), .page-enter > * > *:nth-child(5) { animation-delay: 160ms; }
+.page-enter-flat > *:nth-child(6), .page-enter > * > *:nth-child(6) { animation-delay: 200ms; }
+.page-enter-flat > *:nth-child(n + 7), .page-enter > * > *:nth-child(n + 7) { animation-delay: 240ms; }
+
+/* grids of cards (KPIs, plans, recommendations) stagger in the same way */
+.stagger > * { animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
+.stagger > *:nth-child(6) { animation-delay: 250ms; }
+.stagger > *:nth-child(n + 7) { animation-delay: 300ms; }
+
+.animate-fade { animation: fade-in 0.3s ease-out both; }
+.animate-pop { animation: pop-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* cards: soft shadow, a slight lift on hover when they are interactive */
+.card-hover { transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease; }
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: #cfd6e0;
+  box-shadow: 0 10px 24px -12px rgba(17, 24, 39, 0.18), 0 2px 6px rgba(17, 24, 39, 0.05);
+}
+
+/* every panel card gets the soft shadow, wherever it is built */
+.bg-panel.rounded-xl { box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 1px 3px rgba(17, 24, 39, 0.03); }
+.card-glow { transition: box-shadow 0.25s ease, border-color 0.25s ease; }
+.card-glow:hover { border-color: #d5dce5; box-shadow: 0 8px 24px -14px rgba(17, 24, 39, 0.16), 0 1px 3px rgba(17, 24, 39, 0.04); }
+
+/* bars grow from the left */
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: none; } }
+.bar-grow { transform-origin: left; animation: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+
+/* landing and sign-in background: two soft colour washes */
+.hero-bg {
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(13, 143, 120, 0.10), transparent 60%),
+    radial-gradient(700px 420px at -5% 20%, rgba(42, 120, 214, 0.08), transparent 60%),
+    var(--color-base);
+}
+.text-gradient {
+  background: linear-gradient(90deg, #0d8f78, #2a78d6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eef1f5 0%, #f7f9fb 50%, #eef1f5 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* buttons and links get a gentle press */
+button:not(:disabled):active, a.press:active { transform: scale(0.98); }
+button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, filter 0.15s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
