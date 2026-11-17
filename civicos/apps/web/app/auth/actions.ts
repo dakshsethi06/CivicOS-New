@@ -97,6 +97,13 @@ export async function joinAsCitizen(formData: FormData) {
   redirect("/complaints");
 }
 
+/** The invited person (already signed in from the invitation link) joins the organization that invited them. */
+export async function acceptInvitation(fullName: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("accept_invitation", { p_full_name: fullName.trim() });
+  return error ? { ok: false, message: error.message } : { ok: true };
+}
+
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();

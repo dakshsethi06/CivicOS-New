@@ -82,11 +82,26 @@ runs them in a background task. Each run is stored in `model_runs` with its metr
 | `POST /v1/documents/reindex` | officers | embed passages that have no vector yet (documents added before semantic search) |
 | `GET /v1/documents/search?q=` | signed-in | retrieval only, to inspect what the assistant would see |
 | `GET /v1/me` | signed-in | the caller and their organization |
+| `POST /v1/complaints/{id}/analyse` | anyone who can see the complaint | category by meaning, duplicates within 150 m, photo check; recorded as suggestions |
+| `POST /v1/complaints/embed-missing` | officers | embed older complaints so they can be matched as duplicates |
 | `POST /v1/ops/demo` | City Administrator | replace operations data with the demonstration dataset and train every model (202, background) |
 | `POST /v1/ops/train` | City Administrator, Professional plan | retrain on the latest readings, re-plan routes, refresh recommendations |
 | `POST /v1/traffic/simulate` `{road_id, action, capacity_factor?, extra_trips?}` | officers, Professional plan | what-if: `close`, `reduce_capacity` or `add_demand`; saved to `traffic_simulations` |
 
 Interactive docs at `/docs` when running.
+
+## Database migrations (Alembic)
+
+The schema is the SQL in `supabase/migrations`. Alembic runs those files in order, one revision each, and records what
+a database has in its own `alembic` schema (not `public`, which Supabase exposes through its REST API).
+
+```bash
+cd apps/api
+alembic current                 # what this database has
+alembic stamp 0018              # a database set up by hand in the SQL Editor up to 0018
+alembic upgrade head            # apply the rest
+python migrations/sync_sql.py   # after adding a new SQL file: create its revision
+```
 
 ## Run locally
 

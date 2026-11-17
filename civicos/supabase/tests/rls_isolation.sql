@@ -830,6 +830,110 @@ begin
   raise notice 'ok   assistant tools: operations facts by role and tenant, demo label, charts saved with answers';
 end $$;
 
+-- ---- 5i. field work, inspection reports, department scoping, invitations -----------------------------------
+do $$
+declare
+  v_a uuid := (select id from t_org where tenant = 'A');
+  v_water uuid; v_waste uuid; c_water uuid; c_waste uuid; t jsonb; v_task uuid; n int; r jsonb; v_rec uuid;
+begin
+  select id into v_water from public.departments where organization_id = v_a and code = 'WATER';
+  select id into v_waste from public.departments where organization_id = v_a and code = 'WASTE';
+  -- officer A works in Water Supply (the claims trigger puts the department in the token)
+  update public.users set department_id = v_water where id = 'a0000000-0000-0000-0000-000000000002';
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000004');            -- citizen reports a leak and a garbage pile
+  set local role authenticated;
+  c_water := (public.submit_complaint((select id from public.complaint_categories where organization_id = v_a and code = 'water_leakage'),
+              'Water pipeline leaking near the temple', null, 72.85, 19.05) ->> 'id')::uuid;
+  c_waste := (public.submit_complaint((select id from public.complaint_categories where organization_id = v_a and code = 'garbage_overflow'),
+              'Garbage not lifted near the market', null, 72.86, 19.06) ->> 'id')::uuid;
+  reset role;
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000002');            -- water officer
+  set local role authenticated;
+  if not exists (select 1 from public.complaints where id = c_water) then raise exception 'FAIL water officer cannot see a water complaint'; end if;
+  if exists (select 1 from public.complaints where id = c_waste) then raise exception 'FAIL water officer sees a waste complaint'; end if;
+  perform pg_temp.must_fail('water officer assigns a waste complaint',
+    format('select public.complaint_action(%L, ''assign'', null, ''a0000000-0000-0000-0000-000000000003'')', c_waste));
+  -- a task on the water complaint for the field worker
+  t := public.task_create('Inspect the leaking pipeline', 'Check the joint near the temple', 'inspection', 'high',
+                          'a0000000-0000-0000-0000-000000000003', null, null, null, c_water);
+  v_task := (t ->> 'id')::uuid;
+  if (t ->> 'reference') not like 'TSK-%' then raise exception 'FAIL task reference: %', t; end if;
+  reset role;
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000003');            -- field worker
+  set local role authenticated;
+  r := public.work_list('mine');
+  if jsonb_array_length(r -> 'tasks') <> 1 or (r #>> '{tasks,0,id}')::uuid <> v_task then raise exception 'FAIL field worker task list: %', r; end if;
+  perform public.task_action(v_task, 'start');
+  perform pg_temp.must_fail('field worker cancels a task', format('select public.task_action(%L, ''cancel'')', v_task));
+  perform public.submit_inspection(v_task, null, 'major', 'Joint cracked, steady leak', 'Clamp fitted', true,
+                                   v_a::text || '/a0000000-0000-0000-0000-000000000003/p.jpg', 19.05, 72.85, true);
+  if (select status from public.work_tasks where id = v_task) <> 'done' then raise exception 'FAIL report with complete did not close the task'; end if;
+  perform pg_temp.must_fail('field worker files a report on a task that is not theirs',
+    format('select public.submit_inspection(null, %L, ''good'', ''x'')', c_waste));
+  reset role;
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000004');            -- citizen: no tasks or reports
+  set local role authenticated;
+  select count(*) into n from public.work_tasks;
+  if n <> 0 then raise exception 'FAIL citizen sees tasks'; end if;
+  select count(*) into n from public.inspection_reports;
+  if n <> 0 then raise exception 'FAIL citizen sees inspection reports'; end if;
+  reset role;
+
+  -- an administrator assigns a recommendation: it becomes the field worker's task, and completing it closes the task
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000001');
+  set local role authenticated;
+  select id into v_rec from public.recommendations where module = 'water' limit 1;
+  perform public.recommendation_decide(v_rec, 'assign', null, 'a0000000-0000-0000-0000-000000000003');
+  if not exists (select 1 from public.work_tasks where recommendation_id = v_rec and assignee_id = 'a0000000-0000-0000-0000-000000000003'
+                  and status = 'open' and department_id = v_water) then
+    raise exception 'FAIL assigning a recommendation did not create the task';
+  end if;
+  perform public.recommendation_decide(v_rec, 'complete');
+  if (select status from public.work_tasks where recommendation_id = v_rec) <> 'done' then raise exception 'FAIL completed recommendation left its task open'; end if;
+
+  -- invitations: only the administrator invites; the invited person joins with the role and department chosen
+  r := public.invitation_create('New.Worker@a.test', 'field_worker', v_water);
+  reset role;
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000002');
+  set local role authenticated;
+  perform pg_temp.must_fail('officer invites someone', 'select public.invitation_create(''x@a.test'', ''field_worker'')');
+  reset role;
+  insert into auth.users (id, email) values ('a0000000-0000-0000-0000-0000000000a1', 'new.worker@a.test'),
+                                            ('a0000000-0000-0000-0000-0000000000a2', 'stranger@x.test');
+  perform pg_temp.login('a0000000-0000-0000-0000-0000000000a2');
+  set local role authenticated;
+  perform pg_temp.must_fail('stranger accepts without an invitation', 'select public.accept_invitation(''Stranger'')');
+  reset role;
+  perform pg_temp.login('a0000000-0000-0000-0000-0000000000a1');
+  set local role authenticated;
+  perform public.accept_invitation('New Worker');
+  reset role;
+  if not exists (select 1 from public.users where id = 'a0000000-0000-0000-0000-0000000000a1' and organization_id = v_a
+                  and role = 'field_worker' and department_id = v_water) then
+    raise exception 'FAIL accepted invitation did not create the member';
+  end if;
+  if (select raw_app_meta_data ->> 'role' from auth.users where id = 'a0000000-0000-0000-0000-0000000000a1') <> 'field_worker' then
+    raise exception 'FAIL the new member''s token claims were not set';
+  end if;
+
+  -- another municipality sees none of it
+  perform pg_temp.login('b0000000-0000-0000-0000-000000000001');
+  set local role authenticated;
+  select count(*) into n from public.work_tasks;
+  if n <> 0 then raise exception 'FAIL tenant B sees A''s tasks'; end if;
+  perform pg_temp.must_fail('tenant B starts A''s task', format('select public.task_action(%L, ''reopen'')', v_task));
+  reset role;
+
+  -- leave the seat count as section 6 expects
+  delete from public.users where id = 'a0000000-0000-0000-0000-0000000000a1';
+  update public.users set department_id = null where id = 'a0000000-0000-0000-0000-000000000002';
+  raise notice 'ok   field work: department scoping, tasks, inspection reports, recommendation tasks, invitations, tenancy';
+end $$;
+
 -- ---- 6. plan limit (free = 5 staff; citizens do not use a seat) ---------------------
 do $$
 begin

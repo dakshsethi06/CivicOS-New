@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SeverityBadge, StatusBadge } from "@/components/complaints/badges";
+import { InspectionForm } from "@/components/tasks/inspection-form";
+import { Reports, signedPhotos } from "@/components/tasks/reports";
 import { ErrorNote } from "@/components/ui";
+import type { Report } from "@/lib/tasks";
 import { requireSession } from "@/lib/auth";
 import { CATEGORY_LABEL, SEVERITIES, STATUS_LABEL, STATUSES, when, type Detail } from "@/lib/complaints";
 import { ROLE_LABEL, type Role } from "@/lib/permissions";
@@ -22,7 +25,11 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await createClient();
-  const { data } = await supabase.rpc("complaint_detail", { p_id: id });
+  const [{ data }, reportsRes] = await Promise.all([
+    supabase.rpc("complaint_detail", { p_id: id }),
+    supabase.rpc("complaint_reports", { p_complaint: id }),
+  ]);
+  const reports = (reportsRes.data as Report[] | null) ?? [];
   const d = data as Detail | null;
   const c = d?.complaint;
   if (!d || !c) notFound();
@@ -37,6 +44,7 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
   const mine = session.role === "field_worker" && c.assignee_id === session.userId;
   const step = STATUSES.indexOf(c.status);
   const mismatch = c.suggested_category && c.suggested_category_id !== c.category_id;
+  const reportPhotos = await signedPhotos(supabase, reports);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -136,6 +144,13 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
 
           {staff ? <AiPanel c={c} categories={d.categories} /> : null}
 
+          {staff || mine || reports.length ? (
+            <section className="rounded-xl border border-line bg-panel p-5">
+              <h2 className="text-sm font-medium">Inspection reports ({reports.length})</h2>
+              <Reports reports={reports} photos={reportPhotos} />
+            </section>
+          ) : null}
+
           <section className="rounded-xl border border-line bg-panel p-5">
             <h2 className="text-sm font-medium">History</h2>
             <ol className="mt-4 space-y-4">
@@ -189,6 +204,12 @@ export default async function ComplaintPage({ params, searchParams }: PageProps<
             </form>
           ) : null}
 
+          {(staff || mine) && (c.status === "assigned" || c.status === "in_progress") ? (
+            <section className="space-y-3 rounded-xl border border-line bg-panel p-5">
+              <h2 className="text-sm font-medium">Inspection report</h2>
+              <InspectionForm complaint={c.id} />
+            </section>
+          ) : null}
           {(staff || mine) && c.status === "assigned" ? (
             <StepForm id={c.id} action="start" title="Start work" button="Mark in progress" />
           ) : null}

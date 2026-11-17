@@ -6896,3 +6896,909 @@ begin
 end $$;
 revoke all on function app.generate_recommendations(uuid), app.generate_published_recommendations(uuid),
   app.generate_ops_recommendations(uuid) from public, anon, authenticated;
+
+-- ============================================================
+-- 0019_complaint_ai.sql
+-- ============================================================
+-- CivicOS 0019: AI on complaints (apps/api/app/complaints).
+--
+-- After a complaint is submitted, the API adds to the rule-based suggestions of 0010:
+--   * a category by meaning (Gemini embeddings compared with each category's description and examples),
+--   * duplicates by meaning and distance (open complaints within 150 m whose text means the same),
+--   * a photo check (Gemini vision: is there visible road damage, a pothole, how bad, does it match the text),
+--   * an expected time to close from CivicOS's own resolved complaints once there are enough of them.
+-- All of it stays a SUGGESTION: the officer still confirms category and priority when assigning.
+
+alter table public.complaint_categories
+  add column if not exists description text,          -- what belongs here, in words; the classifier compares with it
+  add column if not exists examples    text[] not null default '{}';
+
+-- default descriptions and examples for the standard categories (editable afterwards)
+create or replace function app.category_defaults(p_code text, out description text, out examples text[])
+language sql immutable as $$
+  select v.d, v.e from (values
+    ('road_damage', 'Damage to a road or footpath surface: potholes, cracks, broken paving, uneven or sunken road.',
+     array['big pothole in the middle of the road', 'road surface broken and full of craters', 'footpath tiles broken, people tripping',
+           'gaddha on the main road near the station', 'road has caved in after rain']),
+    ('water_leakage', 'Problems with piped drinking water: leaks, bursts, no water, low pressure, dirty or contaminated water.',
+     array['water pipeline burst and water flowing on the street', 'no water supply in our building since two days',
+           'very low water pressure in the morning', 'dirty yellow water coming from the tap', 'paani nahi aa raha']),
+    ('garbage_overflow', 'Garbage not collected, overflowing bins, dumping of waste or debris.',
+     array['garbage bin overflowing and smelling', 'waste not lifted for three days', 'people dumping debris on the corner',
+           'kachra not picked up', 'stray dogs spreading garbage from the dustbin']),
+    ('drainage', 'Stormwater drains: choked or blocked drains, waterlogging and flooding of streets.',
+     array['drain is choked and water is overflowing on the road', 'street floods every time it rains',
+           'nala blocked with plastic', 'water logging outside the school']),
+    ('streetlight', 'Street lighting: lamps not working, flickering, damaged poles, dark streets.',
+     array['streetlight not working for a week', 'the whole lane is dark at night', 'light pole leaning and wires hanging',
+           'lamp keeps flickering']),
+    ('sewage', 'Sewers and manholes: sewage overflow, open or broken manholes, foul smell.',
+     array['sewage overflowing from the manhole', 'open manhole without cover on the footpath', 'foul smell of gutter water in the lane',
+           'sewer line blocked, dirty water entering homes']),
+    ('public_infrastructure', 'Public facilities: parks, benches, public toilets, bus stops, walls, railings, playgrounds.',
+     array['public toilet is broken and dirty', 'park bench broken and swings damaged', 'bus stop shelter roof fell',
+           'railing on the bridge is broken']),
+    ('other', 'Anything that does not fit another category.', array[]::text[])
+  ) as v(code, d, e)
+  where v.code = p_code
+$$;
+
+create or replace function app.complaint_category_defaults() returns trigger
+language plpgsql as $$
+declare d record;
+begin
+  if new.description is null then
+    select * into d from app.category_defaults(new.code);
+    new.description := d.description;
+    if coalesce(array_length(new.examples, 1), 0) = 0 then new.examples := coalesce(d.examples, '{}'); end if;
+  end if;
+  return new;
+end $$;
+create trigger complaint_categories_defaults before insert on public.complaint_categories
+  for each row execute function app.complaint_category_defaults();
+
+update public.complaint_categories c
+   set (description, examples) = (select d.description, coalesce(d.examples, '{}') from app.category_defaults(c.code) d)
+ where c.description is null and (select d.description from app.category_defaults(c.code) d) is not null;
+
+alter table public.complaints
+  add column if not exists ai_category_id   uuid references public.complaint_categories(id) on delete set null,
+  add column if not exists ai_similarity    real,      -- cosine similarity to the best category
+  add column if not exists ai_scores        jsonb,     -- {category code: similarity}
+  add column if not exists ai_duplicates    jsonb,     -- [{id, reference, distance_m, similarity}]
+  add column if not exists image_analysis   jsonb,     -- Gemini vision result for the photo
+  add column if not exists ai_model         text,
+  add column if not exists ai_analysed_at   timestamptz;
+
+create table public.complaint_embeddings (
+  complaint_id    uuid primary key references public.complaints(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  model           text not null,
+  embedding       vector(768) not null,
+  created_at      timestamptz not null default now()
+);
+create index complaint_embeddings_org_idx on public.complaint_embeddings (organization_id);
+grant select, insert, update, delete on public.complaint_embeddings to authenticated;
+grant all on public.complaint_embeddings to service_role;
+select app.apply_tenant_policies('public.complaint_embeddings', '{city_admin,dept_officer}', '{city_admin}');
+
+-- Open complaints near a point whose text means the same, for duplicate detection. Distance on the local plane
+-- (good to a few metres at city scale); similarity is cosine on the stored embeddings. Runs under RLS.
+create or replace function public.complaint_similar(p_id uuid, p_embedding vector(768), p_radius_m int default 150, p_limit int default 5)
+returns table (id uuid, reference text, status text, category text, distance_m int, similarity real)
+language sql stable set search_path = public, extensions as $$
+  select o.id, o.reference, o.status, cc.name,
+         round(111320 * sqrt(power(o.lat - me.lat, 2) + power((o.lon - me.lon) * cos(radians(me.lat)), 2)))::int,
+         (1 - (e.embedding <=> p_embedding))::real
+    from complaints me
+    join complaints o on o.organization_id = me.organization_id and o.id <> me.id
+    join complaint_embeddings e on e.complaint_id = o.id
+    left join complaint_categories cc on cc.id = o.category_id
+   where me.id = p_id and me.lat is not null and o.lat is not null
+     and o.resolved_at is null and o.created_at <= me.created_at
+     and 111320 * sqrt(power(o.lat - me.lat, 2) + power((o.lon - me.lon) * cos(radians(me.lat)), 2)) <= p_radius_m
+   order by e.embedding <=> p_embedding
+   limit p_limit
+$$;
+
+-- Applies the API's analysis to one complaint. Only suggestions change: category_id is filled only when the
+-- submitter left it empty and nothing matched by keywords; priority is raised one step only for clear, severe
+-- road damage in the photo; the duplicate link only when none was set. Every change is written to the history.
+create or replace function public.complaint_ai_apply(
+  p_id uuid, p_model text, p_category uuid, p_similarity real, p_scores jsonb, p_duplicates jsonb, p_image jsonb
+) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  c        complaints;
+  c_levels constant text[] := array['low', 'medium', 'high', 'critical'];
+  v_notes  text[] := '{}';
+  v_cat    complaint_categories;
+  v_dup    jsonb;
+  v_days   record;
+begin
+  if app.role() not in ('city_admin', 'dept_officer') then
+    raise exception 'Only the analysis service or an officer can record an analysis' using errcode = 'P0001';
+  end if;
+  select * into c from complaints where id = p_id and organization_id = app.org_id() for update;
+  if not found then raise exception 'Complaint not found' using errcode = 'P0001'; end if;
+
+  -- category by meaning
+  if p_category is not null then
+    select * into v_cat from complaint_categories where id = p_category and organization_id = c.organization_id;
+    v_notes := v_notes || format('Closest category by meaning: %s (similarity %s)', v_cat.name, round(p_similarity::numeric, 2));
+    if c.suggested_category_id is null then
+      c.suggested_category_id := p_category;
+      if c.category_id is null then
+        c.category_id := p_category;
+        c.department_id := coalesce(c.department_id, v_cat.department_id);
+      end if;
+    elsif c.suggested_category_id <> p_category then
+      v_notes := v_notes || 'differs from the keyword suggestion; the officer decides';
+    end if;
+  end if;
+
+  -- duplicates by meaning within 150 m: linked only when the text means the same (similarity 0.915 or more, measured
+  -- on Gemini embeddings) and the category matches, since one place can have several different problems
+  v_dup := (select d from jsonb_array_elements(coalesce(p_duplicates, '[]')) d
+             where (d ->> 'similarity')::real >= 0.915 and coalesce((d ->> 'same_category')::boolean, false)
+             order by (d ->> 'similarity')::real desc limit 1);
+  if v_dup is not null and c.duplicate_of is null then
+    c.duplicate_of := (v_dup ->> 'id')::uuid;
+    v_notes := v_notes || format('possible duplicate of %s: %s m away, same meaning (similarity %s)',
+                                 v_dup ->> 'reference', v_dup ->> 'distance_m', round((v_dup ->> 'similarity')::numeric, 2));
+  end if;
+
+  -- photo
+  if p_image is not null and coalesce(p_image ->> 'error', '') = '' then
+    v_notes := v_notes || format('Photo: %s', coalesce(p_image ->> 'summary', 'analysed'));
+    if (p_image ->> 'road_damage')::boolean and p_image ->> 'severity' = 'high' and not c.severity_confirmed
+       and array_position(c_levels, c.suggested_severity) < 4 then
+      c.suggested_severity := c_levels[array_position(c_levels, c.suggested_severity) + 1];
+      c.severity := c.suggested_severity;
+      v_notes := v_notes || format('priority raised to %s: the photo shows severe road damage', c.suggested_severity);
+    end if;
+    if (p_image ->> 'matches_description') = 'false' then
+      v_notes := v_notes || 'the photo may not show the problem described';
+    end if;
+  end if;
+
+  -- time to close from CivicOS's own history, once there are at least 10 resolved complaints of this category
+  select percentile_cont(0.5) within group (order by extract(epoch from (o.resolved_at - o.created_at)) / 86400) as days, count(*) as n
+    into v_days
+    from complaints o
+   where o.organization_id = c.organization_id and o.category_id = c.category_id and o.resolved_at is not null;
+  if v_days.n >= 10 then
+    c.expected_days := round(v_days.days::numeric, 1);
+    c.expected_days_basis := format('Median of %s resolved CivicOS complaints in this category', v_days.n);
+  end if;
+
+  update complaints set
+    suggested_category_id = c.suggested_category_id, category_id = c.category_id, department_id = c.department_id,
+    duplicate_of = c.duplicate_of, suggested_severity = c.suggested_severity, severity = c.severity,
+    expected_days = c.expected_days, expected_days_basis = c.expected_days_basis,
+    ai_category_id = p_category, ai_similarity = p_similarity, ai_scores = p_scores, ai_duplicates = p_duplicates,
+    image_analysis = p_image, ai_model = p_model, ai_analysed_at = now(),
+    suggestion_reason = coalesce(c.suggestion_reason, '') ||
+                        case when array_length(v_notes, 1) > 0 then ' AI: ' || array_to_string(v_notes, '; ') || '.' else '' end
+   where id = p_id;
+
+  if array_length(v_notes, 1) > 0 then
+    insert into complaint_history (organization_id, complaint_id, from_status, to_status, actor_id, note)
+    values (c.organization_id, c.id, c.status, c.status, null, 'AI analysis: ' || array_to_string(v_notes, '; ') || '.');
+  end if;
+  return jsonb_build_object('notes', to_jsonb(v_notes));
+end $$;
+
+-- complaint_detail gains the AI fields through to_jsonb(c); this adds the readable category name
+create or replace function public.complaint_ai_view(p_id uuid) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object('ai_category', cc.name, 'ai_similarity', c.ai_similarity, 'ai_scores', c.ai_scores,
+                            'ai_duplicates', c.ai_duplicates, 'image_analysis', c.image_analysis, 'ai_model', c.ai_model,
+                            'ai_analysed_at', c.ai_analysed_at)
+    from complaints c left join complaint_categories cc on cc.id = c.ai_category_id
+   where c.id = p_id
+$$;
+
+revoke all on function public.complaint_similar(uuid, vector(768), int, int), public.complaint_ai_apply(uuid, text, uuid, real, jsonb, jsonb, jsonb),
+  public.complaint_ai_view(uuid) from public, anon;
+grant execute on function public.complaint_similar(uuid, vector(768), int, int), public.complaint_ai_apply(uuid, text, uuid, real, jsonb, jsonb, jsonb),
+  public.complaint_ai_view(uuid) to authenticated;
+
+-- ============================================================
+-- 0020_assistant_tools.sql
+-- ============================================================
+-- CivicOS 0020: assistant tools for the operations modules and places, and charts in answers.
+--
+-- assistant_ops(module, ward)     water / waste / traffic: the current state, model outputs and a chart, as facts
+-- assistant_nearby(lon, lat, r)   what is around a point (PostGIS): ward, open complaints, anomalies, risky pipes,
+--                                 bins about to fill, congested roads, incidents
+-- Each fact names its source, and says "demonstration data" when the operations data is the demo dataset.
+-- All of it runs as the caller (security invoker), so Row Level Security decides what is visible.
+
+alter table public.assistant_messages add column if not exists charts jsonb not null default '[]'::jsonb;
+
+drop function if exists public.assistant_save(uuid, text, text, jsonb, bigint[], int, text, jsonb);
+create or replace function public.assistant_save(
+  p_conversation uuid, p_question text, p_answer text, p_citations jsonb, p_chunk_ids bigint[], p_fact_count int, p_mode text,
+  p_tools jsonb default '[]'::jsonb, p_charts jsonb default '[]'::jsonb
+) returns uuid
+language plpgsql set search_path = public as $$
+declare
+  v_conv uuid := p_conversation;
+begin
+  if v_conv is null or not exists (select 1 from assistant_conversations where id = v_conv and user_id = auth.uid()) then
+    insert into assistant_conversations (organization_id, user_id, title)
+    values (app.org_id(), auth.uid(), left(p_question, 80)) returning id into v_conv;
+  end if;
+  insert into assistant_messages (organization_id, conversation_id, role, content) values (app.org_id(), v_conv, 'user', p_question);
+  insert into assistant_messages (organization_id, conversation_id, role, content, citations, mode, charts)
+  values (app.org_id(), v_conv, 'assistant', p_answer, coalesce(p_citations, '[]'::jsonb), p_mode, coalesce(p_charts, '[]'::jsonb));
+  insert into retrieval_logs (organization_id, user_id, query, chunk_ids, fact_count, mode, tools)
+  values (app.org_id(), auth.uid(), p_question, coalesce(p_chunk_ids, '{}'), coalesce(p_fact_count, 0), p_mode, coalesce(p_tools, '[]'::jsonb));
+  return v_conv;
+end $$;
+revoke all on function public.assistant_save(uuid, text, text, jsonb, bigint[], int, text, jsonb, jsonb) from public, anon;
+grant execute on function public.assistant_save(uuid, text, text, jsonb, bigint[], int, text, jsonb, jsonb) to authenticated;
+
+create or replace function public.assistant_history(p_conversation uuid default null)
+returns jsonb
+language sql stable set search_path = public as $$
+  select jsonb_build_object(
+    'conversations', coalesce((
+      select jsonb_agg(jsonb_build_object('id', id, 'title', title, 'created_at', created_at) order by created_at desc)
+        from (select * from assistant_conversations where user_id = auth.uid() order by created_at desc limit 20) c), '[]'::jsonb),
+    'messages', coalesce((
+      select jsonb_agg(jsonb_build_object('role', role, 'content', content, 'citations', citations, 'mode', mode, 'charts', charts,
+                                          'at', created_at) order by id)
+        from assistant_messages where conversation_id = p_conversation), '[]'::jsonb),
+    'documents', (select count(*) from documents where status = 'ready'),
+    'usage', jsonb_build_object('used', app.usage_this_month(app.org_id(), 'ai_query'),
+                                'limit', app.plan_limit(app.org_id(), 'ai_queries_per_month')))
+$$;
+
+-- ------------------------------------------------------------------------------------------- operations facts
+create or replace function public.assistant_ops(p_module text, p_ward text default null) returns jsonb
+language plpgsql stable set search_path = public, extensions as $$
+declare
+  v_zone   uuid;
+  v_scope  text := 'Mumbai';
+  v_demo   boolean := coalesce((select kind = 'demo' from ops_datasets where organization_id = app.org_id()), false);
+  v_src    text;
+  v_last   timestamptz;
+  f        text[] := '{}';
+  v_chart  jsonb;
+  r        record;
+  v_txt    text;
+begin
+  if p_ward is not null and trim(p_ward) <> '' then
+    select id, 'Ward ' || code into v_zone, v_scope from city_zones where upper(code) = upper(trim(p_ward)) and organization_id = app.org_id();
+    if v_zone is null then
+      return jsonb_build_object('facts', '[]'::jsonb, 'note', format('There is no ward %s in this city.', p_ward));
+    end if;
+  end if;
+
+  if p_module = 'water' then
+    v_src := 'CivicOS water network meters and models' || case when v_demo then ' (demonstration data)' else '' end;
+    select max(ts) into v_last from water_readings;
+    if v_last is null then return jsonb_build_object('facts', '[]'::jsonb, 'note', 'No water meter readings in this workspace.'); end if;
+
+    select sum(r2.consumption_m3) filter (where r2.ts > v_last - interval '24 hours') as now24,
+           sum(r2.consumption_m3) filter (where r2.ts > v_last - interval '192 hours' and r2.ts <= v_last - interval '168 hours') as wk
+      into r from water_readings r2 join water_sensors s on s.id = r2.sensor_id
+     where r2.ts > v_last - interval '8 days' and (v_zone is null or s.zone_id = v_zone);
+    f := f || format('Water drawn in the 24 hours to %s, %s: %s m3%s', to_char(v_last at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'), v_scope,
+                     to_char(r.now24, 'FM999,999,999'),
+                     case when r.wk > 0 then format(' (%s%% against the same day a week earlier)', to_char((r.now24 / r.wk - 1) * 100, 'FMSG990.0')) else '' end);
+
+    if v_zone is null then
+      select string_agg(format('%s %s%%', code, to_char(pct, 'FMSG990.0')), ', ' order by pct desc) into v_txt
+        from (select z.code, (sum(r2.consumption_m3) filter (where r2.ts > v_last - interval '7 days')
+                              / nullif(sum(r2.consumption_m3) filter (where r2.ts <= v_last - interval '7 days'), 0) - 1) * 100 as pct
+                from water_readings r2 join water_sensors s on s.id = r2.sensor_id join city_zones z on z.id = s.zone_id
+               where r2.ts > v_last - interval '14 days' group by z.code order by 2 desc nulls last limit 3) q;
+      if v_txt is not null then f := f || ('Wards whose consumption rose most over the last 7 days against the 7 before: ' || v_txt); end if;
+    end if;
+
+    for r in select a.*, s.code as sensor, z.code as ward from water_anomalies a join water_sensors s on s.id = a.sensor_id
+                     left join city_zones z on z.id = a.zone_id
+              where a.status in ('open', 'inspecting') and (v_zone is null or a.zone_id = v_zone)
+              order by (a.level = 'high') desc, a.peak_score desc limit 3 loop
+      f := f || format('Open %s anomaly at meter %s (Ward %s), %s to %s: %s Consumption %s%% against its usual level, pressure change %s bar. Status: %s. An anomaly is a pattern to inspect, not proof of a leak.',
+                       r.level, r.sensor, r.ward, to_char(r.started_at at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'),
+                       to_char(r.ended_at at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'), r.pattern,
+                       coalesce(r.evidence ->> 'consumption_vs_baseline_pct', '?'), coalesce(r.evidence ->> 'pressure_change_bar', '?'), r.status);
+    end loop;
+    select count(*) into r from water_anomalies where status in ('open', 'inspecting') and (v_zone is null or zone_id = v_zone);
+    f := f || format('Open water anomalies, %s: %s', v_scope, r.count);
+
+    select count(*) filter (where k.level = 'high') as hi, count(*) as n,
+           string_agg(format('%s (%s, %s, %s%%)', p.code, p.material, p.installed_year, round((k.probability * 100)::numeric)), '; '
+                      order by k.probability desc) filter (where k.level = 'high') as top
+      into r from pipeline_risk k join water_pipelines p on p.id = k.pipeline_id where v_zone is null or p.zone_id = v_zone;
+    if r.n > 0 then
+      f := f || format('Pipes with at least a 50%% chance of failing in the next 12 months, %s: %s of %s (XGBoost pipe failure model)', v_scope, r.hi, r.n);
+      if r.top is not null then f := f || ('Highest-risk pipes: ' || array_to_string((string_to_array(r.top, '; '))[1:3], '; ')); end if;
+    end if;
+
+    for r in select w.name, k.current_pct, k.min_pct, k.days_to_20pct, k.risk from reservoir_risk k join water_reservoirs w on w.id = k.reservoir_id
+              where k.risk <> 'low' and (v_zone is null or w.zone_id = v_zone) order by k.min_pct limit 3 loop
+      f := f || format('%s: level now %s%%, projected to fall to %s%% within 7 days (%s shortage risk)', r.name,
+                       round(r.current_pct::numeric), round(r.min_pct::numeric), r.risk);
+    end loop;
+
+    select sum(predicted_m3) as v, sum(lower_m3) as lo, sum(upper_m3) as hi into r
+      from (select * from water_predictions where granularity = 'day' and (v_zone is null or zone_id = v_zone)
+             order by target_at) p
+     where p.target_at < (select min(target_at) + interval '7 days' from water_predictions where granularity = 'day');
+    if r.v is not null then
+      f := f || format('Forecast water demand for the next 7 days, %s: %s m3 (range %s to %s; XGBoost demand model)', v_scope,
+                       to_char(r.v, 'FM999,999,999'), to_char(r.lo, 'FM999,999,999'), to_char(r.hi, 'FM999,999,999'));
+    end if;
+
+    v_chart := jsonb_build_object('type', 'line', 'title', format('Water drawn per day, %s (m3): last 14 days and 7-day forecast', v_scope),
+      'x', 'day', 'unit', 'm3',
+      'series', jsonb_build_array(jsonb_build_object('key', 'observed', 'label', 'Observed'), jsonb_build_object('key', 'forecast', 'label', 'Forecast')),
+      'data', coalesce((select jsonb_agg(x order by x ->> 'day') from (
+                select jsonb_build_object('day', to_char(d, 'DD Mon'), 'observed', round(v::numeric)) as x
+                  from (select (r2.ts at time zone 'Asia/Kolkata')::date d, sum(r2.consumption_m3) v
+                          from water_readings r2 join water_sensors s on s.id = r2.sensor_id
+                         where r2.ts > v_last - interval '15 days' and (v_zone is null or s.zone_id = v_zone)
+                         group by 1) q
+                 where d > (v_last at time zone 'Asia/Kolkata')::date - 15 and d < (v_last at time zone 'Asia/Kolkata')::date
+                union all
+                select jsonb_build_object('day', to_char(d, 'DD Mon'), 'forecast', round(v::numeric))
+                  from (select (target_at at time zone 'Asia/Kolkata')::date d, sum(predicted_m3) v from water_predictions
+                         where granularity = 'day' and (v_zone is null or zone_id = v_zone) group by 1 order by 1 limit 7) q) z), '[]'::jsonb));
+
+  elsif p_module = 'waste' then
+    v_src := 'CivicOS bin sensors and models' || case when v_demo then ' (demonstration data)' else '' end;
+    select count(*) as n, count(*) filter (where p.fill_now >= 95) as full_now, count(*) filter (where p.p_overflow_6h >= 0.5) as o6,
+           count(*) filter (where p.p_overflow_12h >= 0.5) as o12, count(*) filter (where p.p_overflow_24h >= 0.5) as o24, max(p.generated_at) as at
+      into r from waste_predictions p join waste_bins b on b.id = p.bin_id where v_zone is null or b.zone_id = v_zone;
+    if r.n = 0 then
+      return jsonb_build_object('facts', '[]'::jsonb, 'note',
+        case when exists (select 1 from waste_bins) then 'There are bins but no overflow predictions yet: the waste models have not been trained.'
+             else 'No bin sensors in this workspace.' end);
+    end if;
+    f := f || format('Bins, %s, at %s: %s in total, %s full now; likely (chance 50%% or more) to reach 95%% within 6 hours: %s, within 12 hours: %s, within 24 hours: %s, if not collected (XGBoost overflow model)',
+                     v_scope, to_char(r.at at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'), r.n, r.full_now, r.o6, r.o12, r.o24);
+    select string_agg(format('%s (Ward %s, %s%% full now, %s%% chance within 12 h)', b.code, z.code, round(p.fill_now::numeric),
+                             round((p.p_overflow_12h * 100)::numeric)), '; ' order by p.p_overflow_12h desc, p.fill_now desc) into v_txt
+      from (select * from waste_predictions order by p_overflow_12h desc, fill_now desc) p join waste_bins b on b.id = p.bin_id
+      left join city_zones z on z.id = b.zone_id
+     where (v_zone is null or b.zone_id = v_zone) and p.p_overflow_12h >= 0.5;
+    if v_txt is not null then f := f || ('Bins most urgently needing collection: ' || array_to_string((string_to_array(v_txt, '; '))[1:5], '; ')); end if;
+
+    select sum(distance_km) filter (where kind = 'optimised') as opt, sum(distance_km) filter (where kind = 'fixed') as fix,
+           sum(bins_visited) filter (where kind = 'optimised') as ob, sum(bins_visited) filter (where kind = 'fixed') as fb, max(planned_for) as d
+      into r from collection_plans where planned_for = (select max(planned_for) from collection_plans) and (v_zone is null or zone_id = v_zone);
+    if r.opt is not null then
+      f := f || format('Collection plan for %s, %s: optimised routes %s km visiting %s bins, against %s km and %s bins on the fixed schedule',
+                       to_char(r.d, 'DD Mon'), v_scope, round(r.opt::numeric, 1), r.ob, round(r.fix::numeric, 1), r.fb);
+    end if;
+    select round(avg(prev) filter (where collected)::numeric, 1) as at_coll, round((avg((fill_pct >= 95)::int) * 100)::numeric, 2) as full_pct
+      into r from (select w.collected, w.fill_pct, lag(w.fill_pct) over (partition by w.bin_id order by w.ts) prev
+                     from waste_readings w join waste_bins b on b.id = w.bin_id where v_zone is null or b.zone_id = v_zone) q;
+    f := f || format('Collection efficiency, %s: bins were on average %s%% full when emptied, and full %s%% of the time', v_scope, r.at_coll, r.full_pct);
+
+    v_chart := jsonb_build_object('type', 'bar', 'title', format('Bins likely to fill within 24 hours, by ward%s', case when v_zone is null then '' else ' (' || v_scope || ')' end),
+      'x', 'ward', 'unit', 'bins', 'series', jsonb_build_array(jsonb_build_object('key', 'bins', 'label', 'Bins')),
+      'data', coalesce((select jsonb_agg(jsonb_build_object('ward', code, 'bins', n) order by n desc, code) from (
+                select z.code, count(*) filter (where p.p_overflow_24h >= 0.5) n from waste_predictions p join waste_bins b on b.id = p.bin_id
+                  join city_zones z on z.id = b.zone_id where v_zone is null or b.zone_id = v_zone group by z.code
+                having count(*) filter (where p.p_overflow_24h >= 0.5) > 0 order by 2 desc limit 12) q), '[]'::jsonb));
+
+  elsif p_module = 'traffic' then
+    v_src := 'CivicOS traffic detectors and models' || case when v_demo then ' (demonstration data)' else '' end;
+    select max(ts) into v_last from traffic_readings;
+    if v_last is null then return jsonb_build_object('facts', '[]'::jsonb, 'note', 'No traffic readings in this workspace.'); end if;
+    select count(*) as n, avg(1 - t.speed_kmh / d.speed_limit) as c, count(*) filter (where 1 - t.speed_kmh / d.speed_limit >= 0.4) as heavy
+      into r from traffic_readings t join roads d on d.id = t.road_id where t.ts = v_last and (v_zone is null or d.zone_id = v_zone);
+    f := f || format('Traffic at %s, %s: average congestion %s%% (how far speeds fall below the limit) on %s monitored roads; %s heavy or severe',
+                     to_char(v_last at time zone 'Asia/Kolkata', 'DD Mon HH24:MI'), v_scope, round((coalesce(r.c, 0) * 100)::numeric), r.n, r.heavy);
+    select string_agg(format('%s (%s of %s km/h)', d.name, round(t.speed_kmh::numeric), d.speed_limit), '; ' order by t.speed_kmh / d.speed_limit) into v_txt
+      from traffic_readings t join roads d on d.id = t.road_id where t.ts = v_last and (v_zone is null or d.zone_id = v_zone);
+    if v_txt is not null then f := f || ('Slowest roads now: ' || array_to_string((string_to_array(v_txt, '; '))[1:5], '; ')); end if;
+    select count(*) filter (where congestion >= 0.4) as heavy, string_agg(format('%s %s%%', d.name, round((tp.congestion * 100)::numeric)), '; '
+             order by tp.congestion desc) as top
+      into r from traffic_predictions tp join roads d on d.id = tp.road_id where tp.horizon_min = 60 and (v_zone is null or d.zone_id = v_zone);
+    f := f || format('Forecast in 60 minutes, %s: %s roads heavy or severe; most congested: %s (XGBoost congestion model)', v_scope, r.heavy,
+                     coalesce(array_to_string((string_to_array(r.top, '; '))[1:3], '; '), 'none'));
+    select string_agg(format('%s:00 (%s%%)', h, round((c * 100)::numeric)), ', ' order by c desc) into v_txt
+      from (select extract(hour from t.ts at time zone 'Asia/Kolkata')::int h, avg(1 - t.speed_kmh / d.speed_limit) c
+              from traffic_readings t join roads d on d.id = t.road_id
+             where extract(isodow from t.ts at time zone 'Asia/Kolkata') < 6 and (v_zone is null or d.zone_id = v_zone)
+             group by 1 order by 2 desc limit 3) q;
+    if v_txt is not null then f := f || ('Weekday peak hours by average congestion, ' || v_scope || ': ' || v_txt); end if;
+    select count(*) filter (where i.occurred_at > now() - interval '30 days') as m, count(*) as y into r
+      from traffic_incidents i left join roads d on d.id = i.road_id where v_zone is null or d.zone_id = v_zone;
+    select string_agg(format('%s (%s)', name, n), '; ' order by n desc) into v_txt
+      from (select d.name, count(*) n from traffic_incidents i join roads d on d.id = i.road_id
+             where i.occurred_at > now() - interval '365 days' and (v_zone is null or d.zone_id = v_zone)
+             group by d.name order by 2 desc limit 3) q;
+    f := f || format('Traffic incidents, %s: %s in the last 30 days, %s in the last 12 months; most incidents: %s', v_scope, r.m, r.y, coalesce(v_txt, 'none'));
+
+    v_chart := jsonb_build_object('type', 'line', 'title', format('Average congestion by hour of day, %s (%%)', v_scope), 'x', 'hour', 'unit', '%',
+      'series', jsonb_build_array(jsonb_build_object('key', 'weekday', 'label', 'Weekdays'), jsonb_build_object('key', 'weekend', 'label', 'Weekends')),
+      'data', coalesce((select jsonb_agg(jsonb_build_object('hour', lpad(h::text, 2, '0') || ':00', 'weekday', round((wd * 100)::numeric, 1),
+                                                           'weekend', round((we * 100)::numeric, 1)) order by h) from (
+                select extract(hour from t.ts at time zone 'Asia/Kolkata')::int h,
+                       avg(1 - t.speed_kmh / d.speed_limit) filter (where extract(isodow from t.ts at time zone 'Asia/Kolkata') < 6) wd,
+                       avg(1 - t.speed_kmh / d.speed_limit) filter (where extract(isodow from t.ts at time zone 'Asia/Kolkata') >= 6) we
+                  from traffic_readings t join roads d on d.id = t.road_id where v_zone is null or d.zone_id = v_zone group by 1) q), '[]'::jsonb));
+  else
+    raise exception 'Unknown module %', p_module using errcode = 'P0001';
+  end if;
+
+  return jsonb_build_object('scope', v_scope, 'is_demo', v_demo, 'source', v_src,
+                            'facts', to_jsonb(f), 'chart', v_chart);
+end $$;
+
+-- ------------------------------------------------------------------------------------------- places (PostGIS)
+create or replace function public.assistant_nearby(p_lon float8, p_lat float8, p_radius_m int default 500) returns jsonb
+language plpgsql stable set search_path = public, extensions as $$
+declare
+  v_pt    geography := st_setsrid(st_makepoint(p_lon, p_lat), 4326)::geography;
+  v_r     int := least(greatest(coalesce(p_radius_m, 500), 50), 5000);
+  v_demo  boolean := coalesce((select kind = 'demo' from ops_datasets where organization_id = app.org_id()), false);
+  v_ward  record;
+  f       jsonb := '[]'::jsonb;
+  r       record;
+  v_ops   text := 'CivicOS operations data' || case when v_demo then ' (demonstration data)' else '' end;
+begin
+  select code, name into v_ward from city_zones where st_contains(boundary, st_setsrid(st_makepoint(p_lon, p_lat), 4326)) limit 1;
+  f := f || jsonb_build_object('text', format('The point %s, %s is %s', round(p_lat::numeric, 5), round(p_lon::numeric, 5),
+                                              coalesce(format('in Ward %s (%s)', v_ward.code, v_ward.name), 'outside the city''s wards')),
+                               'source', 'Ward boundaries (DataMeet, Municipal Spatial Data)');
+
+  select count(*) as n, string_agg(format('%s %s, %s m, %s', c.reference, coalesce(cc.name, 'uncategorised'), d, replace(c.status, '_', ' ')), '; ' order by d) as list
+    into r from (select c.*, round(st_distance(st_setsrid(st_makepoint(c.lon, c.lat), 4326)::geography, v_pt))::int d from complaints c
+                  where c.lat is not null and c.resolved_at is null
+                    and st_dwithin(st_setsrid(st_makepoint(c.lon, c.lat), 4326)::geography, v_pt, v_r)) c
+    left join complaint_categories cc on cc.id = c.category_id;
+  f := f || jsonb_build_object('text', format('Open complaints within %s m: %s%s', v_r, r.n,
+                                              case when r.n > 0 then ': ' || array_to_string((string_to_array(r.list, '; '))[1:5], '; ') else '' end),
+                               'source', 'CivicOS complaints (live, as visible to you)');
+
+  select count(*) as n, string_agg(format('meter %s, %s, %s m: %s', s.code, a.level, round(st_distance(s.geom::geography, v_pt)), a.pattern), '; ') as list
+    into r from water_anomalies a join water_sensors s on s.id = a.sensor_id
+   where a.status in ('open', 'inspecting') and st_dwithin(s.geom::geography, v_pt, v_r);
+  if r.n > 0 or exists (select 1 from water_sensors) then
+    f := f || jsonb_build_object('text', format('Open water anomalies within %s m: %s%s', v_r, r.n, case when r.n > 0 then ': ' || r.list else '' end), 'source', v_ops);
+  end if;
+
+  select count(*) as n, string_agg(format('%s (%s, %s, %s%% chance of failure in 12 months, %s m)', p.code, p.material, p.installed_year,
+                                          round((k.probability * 100)::numeric), round(st_distance(p.geom::geography, v_pt))), '; ' order by k.probability desc) as list
+    into r from pipeline_risk k join water_pipelines p on p.id = k.pipeline_id
+   where k.probability >= 0.5 and st_dwithin(p.geom::geography, v_pt, v_r);
+  if exists (select 1 from water_pipelines) then
+    f := f || jsonb_build_object('text', format('Pipes at high failure risk within %s m: %s%s', v_r, r.n, case when r.n > 0 then ': ' || r.list else '' end), 'source', v_ops);
+  end if;
+
+  select count(*) as n, string_agg(format('%s (%s%% full, %s%% chance of filling within 24 h, %s m)', b.code, round(p.fill_now::numeric),
+                                          round((p.p_overflow_24h * 100)::numeric), round(st_distance(b.geom::geography, v_pt))), '; ' order by p.p_overflow_24h desc) as list
+    into r from waste_predictions p join waste_bins b on b.id = p.bin_id
+   where p.p_overflow_24h >= 0.5 and st_dwithin(b.geom::geography, v_pt, v_r);
+  if exists (select 1 from waste_bins) then
+    f := f || jsonb_build_object('text', format('Bins likely to fill within 24 hours within %s m: %s%s', v_r, r.n, case when r.n > 0 then ': ' || r.list else '' end), 'source', v_ops);
+  end if;
+
+  select string_agg(format('%s %s%% congested', d.name, round(((1 - t.speed_kmh / d.speed_limit) * 100)::numeric)), '; ' order by t.speed_kmh / d.speed_limit) as list,
+         count(*) as n
+    into r from roads d join traffic_readings t on t.road_id = d.id and t.ts = (select max(ts) from traffic_readings)
+   where st_dwithin(d.geom::geography, v_pt, v_r);
+  if r.n > 0 then f := f || jsonb_build_object('text', format('Monitored roads within %s m now: %s', v_r, r.list), 'source', v_ops); end if;
+
+  select count(*) as n into r from traffic_incidents i where i.occurred_at > now() - interval '90 days' and st_dwithin(i.geom::geography, v_pt, v_r);
+  if exists (select 1 from roads) then
+    f := f || jsonb_build_object('text', format('Traffic incidents within %s m in the last 90 days: %s', v_r, r.n), 'source', v_ops);
+  end if;
+
+  return jsonb_build_object('ward', v_ward.code, 'radius_m', v_r, 'facts', f);
+end $$;
+
+revoke all on function public.assistant_ops(text, text), public.assistant_nearby(float8, float8, int) from public, anon;
+grant execute on function public.assistant_ops(text, text), public.assistant_nearby(float8, float8, int) to authenticated;
+
+-- ============================================================
+-- 0021_field_teams.sql
+-- ============================================================
+-- CivicOS 0021: field work, inspection reports, department scoping and email invitations.
+--
+-- * Work tasks: inspections and repairs assigned to staff, created by officers or automatically when a recommendation
+--   is assigned; field workers start and complete the ones assigned to them.
+-- * Inspection reports: what a field worker found (condition, findings, action taken, photo, location), on a task or
+--   a complaint.
+-- * Department scoping: a Department Officer who belongs to a department sees and acts on that department's
+--   complaints and tasks (and those with no department). Officers without a department, and administrators, see all.
+-- * Invitations: an administrator invites by email with a role and department; the person accepts by setting their
+--   own name and password. The plan's staff limit counts pending invitations.
+
+-- ------------------------------------------------------------------------------------------------ helpers
+create or replace function app.in_my_department(p_department uuid) returns boolean
+language sql stable as $$
+  select app.role() is distinct from 'dept_officer' or app.department_id() is null or p_department is null
+         or p_department = app.department_id()
+$$;
+
+create or replace function app.module_department(p_org uuid, p_module text) returns uuid
+language sql stable security definer set search_path = public as $$
+  select id from departments where organization_id = p_org
+     and code = case p_module when 'water' then 'WATER' when 'waste' then 'WASTE' when 'traffic' then 'TRAFFIC' end
+$$;
+
+-- ------------------------------------------------------------------------------------------- department scope
+create policy dept_scope on public.complaints as restrictive for all to authenticated
+  using (app.in_my_department(department_id)) with check (app.in_my_department(department_id));
+
+-- complaint_action is SECURITY DEFINER (it bypasses RLS), so it checks the department itself
+alter function public.complaint_action(uuid, text, text, uuid, text, uuid) rename to complaint_action_core;
+alter function public.complaint_action_core(uuid, text, text, uuid, text, uuid) set schema app;
+revoke all on function app.complaint_action_core(uuid, text, text, uuid, text, uuid) from public, anon, authenticated;
+
+create or replace function public.complaint_action(
+  p_id uuid, p_action text, p_note text default null, p_assignee uuid default null,
+  p_severity text default null, p_category uuid default null
+) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_dept uuid;
+  v_new  uuid;
+begin
+  select department_id into v_dept from complaints where id = p_id and organization_id = app.org_id();
+  if not app.in_my_department(v_dept) then
+    raise exception 'This complaint belongs to another department' using errcode = 'P0001';
+  end if;
+  if p_category is not null then
+    select department_id into v_new from complaint_categories where id = p_category and organization_id = app.org_id();
+    if not app.in_my_department(v_new) then
+      raise exception 'You can only move a complaint to a category of your own department' using errcode = 'P0001';
+    end if;
+  end if;
+  return app.complaint_action_core(p_id, p_action, p_note, p_assignee, p_severity, p_category);
+end $$;
+revoke all on function public.complaint_action(uuid, text, text, uuid, text, uuid) from public, anon;
+grant execute on function public.complaint_action(uuid, text, text, uuid, text, uuid) to authenticated;
+
+-- --------------------------------------------------------------------------------------------- work tasks
+create table public.work_tasks (
+  id                uuid primary key default gen_random_uuid(),
+  organization_id   uuid not null references public.organizations(id) on delete cascade,
+  reference         text not null,
+  kind              text not null check (kind in ('inspection', 'repair', 'collection', 'recommendation', 'other')),
+  title             text not null,
+  description       text,
+  priority          text not null default 'medium' check (priority in ('low', 'medium', 'high', 'critical')),
+  status            text not null default 'open' check (status in ('open', 'in_progress', 'done', 'cancelled')),
+  department_id     uuid references public.departments(id) on delete set null,
+  zone_id           uuid references public.city_zones(id) on delete set null,
+  lat               double precision,
+  lon               double precision,
+  assignee_id       uuid references public.users(id) on delete set null,
+  created_by        uuid references public.users(id) on delete set null,
+  recommendation_id uuid references public.recommendations(id) on delete set null,
+  anomaly_id        bigint references public.water_anomalies(id) on delete set null,
+  complaint_id      uuid references public.complaints(id) on delete set null,
+  due_at            timestamptz,
+  started_at        timestamptz,
+  completed_at      timestamptz,
+  created_at        timestamptz not null default now(),
+  unique (organization_id, reference)
+);
+create index work_tasks_org_idx on public.work_tasks (organization_id, status);
+create index work_tasks_assignee_idx on public.work_tasks (assignee_id, status);
+create sequence public.work_task_ref_seq;
+
+create table public.inspection_reports (
+  id              bigint generated always as identity primary key,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  task_id         uuid references public.work_tasks(id) on delete cascade,
+  complaint_id    uuid references public.complaints(id) on delete cascade,
+  author_id       uuid references public.users(id) on delete set null,
+  condition       text not null check (condition in ('good', 'minor', 'major', 'critical')),
+  findings        text not null,
+  action_taken    text,
+  needs_followup  boolean not null default false,
+  photo_path      text,
+  lat             double precision,
+  lon             double precision,
+  created_at      timestamptz not null default now(),
+  check (task_id is not null or complaint_id is not null)
+);
+create index inspection_reports_task_idx on public.inspection_reports (task_id);
+create index inspection_reports_complaint_idx on public.inspection_reports (complaint_id);
+
+grant select on public.work_tasks, public.inspection_reports to authenticated;
+grant all on public.work_tasks, public.inspection_reports to service_role;
+grant usage, select on all sequences in schema public to authenticated, service_role;
+revoke all on public.work_tasks, public.inspection_reports from anon;
+-- reads: officers (department-scoped below) and the assignee; all writes go through the functions below
+select app.apply_tenant_policies('public.work_tasks', '{city_admin,dept_officer}', '{}');
+create policy assignee_read on public.work_tasks for select to authenticated
+  using (organization_id = (select app.org_id()) and assignee_id = (select auth.uid()));
+create policy dept_scope on public.work_tasks as restrictive for select to authenticated
+  using (app.in_my_department(department_id) or assignee_id = (select auth.uid()));
+select app.apply_tenant_policies('public.inspection_reports', '{city_admin,dept_officer}', '{}');
+create policy author_read on public.inspection_reports for select to authenticated
+  using (organization_id = (select app.org_id()) and author_id = (select auth.uid()));
+
+create or replace function public.task_create(
+  p_title text, p_description text default null, p_kind text default 'inspection', p_priority text default 'medium',
+  p_assignee uuid default null, p_due timestamptz default null, p_recommendation uuid default null,
+  p_anomaly bigint default null, p_complaint uuid default null
+) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_org  uuid := app.org_id();
+  v_dept uuid; v_zone uuid; v_lat float8; v_lon float8;
+  v_id   uuid;
+  v_ref  text;
+begin
+  if app.role() not in ('city_admin', 'dept_officer') then
+    raise exception 'Only officers can create tasks' using errcode = 'P0001';
+  end if;
+  if coalesce(trim(p_title), '') = '' then raise exception 'Give the task a title' using errcode = 'P0001'; end if;
+  if p_assignee is not null and not exists (select 1 from users where id = p_assignee and organization_id = v_org
+                                             and role in ('city_admin', 'dept_officer', 'field_worker') and is_active) then
+    raise exception 'Choose a staff member of this organization' using errcode = 'P0001';
+  end if;
+  -- where and which department, from what the task is about
+  if p_complaint is not null then
+    select department_id, zone_id, lat, lon into v_dept, v_zone, v_lat, v_lon from complaints where id = p_complaint and organization_id = v_org;
+    if not found then raise exception 'Complaint not found' using errcode = 'P0001'; end if;
+  elsif p_anomaly is not null then
+    select a.zone_id, (st_asgeojson(s.geom)::jsonb #>> '{coordinates,1}')::float8, (st_asgeojson(s.geom)::jsonb #>> '{coordinates,0}')::float8
+      into v_zone, v_lat, v_lon
+      from water_anomalies a join water_sensors s on s.id = a.sensor_id where a.id = p_anomaly and a.organization_id = v_org;
+    if not found then raise exception 'Anomaly not found' using errcode = 'P0001'; end if;
+    v_dept := app.module_department(v_org, 'water');
+    update water_anomalies set status = 'inspecting', reviewed_by = auth.uid(), reviewed_at = now()
+     where id = p_anomaly and status = 'open';
+  elsif p_recommendation is not null then
+    select zone_id, app.module_department(v_org, module) into v_zone, v_dept from recommendations where id = p_recommendation and organization_id = v_org;
+    if not found then raise exception 'Recommendation not found' using errcode = 'P0001'; end if;
+  end if;
+  v_dept := coalesce(v_dept, app.department_id());
+  if not app.in_my_department(v_dept) then raise exception 'This belongs to another department' using errcode = 'P0001'; end if;
+
+  v_ref := 'TSK-' || lpad(nextval('public.work_task_ref_seq')::text, 6, '0');
+  insert into work_tasks (organization_id, reference, kind, title, description, priority, department_id, zone_id, lat, lon,
+                          assignee_id, created_by, recommendation_id, anomaly_id, complaint_id, due_at)
+  values (v_org, v_ref, coalesce(p_kind, 'inspection'), trim(p_title), nullif(trim(coalesce(p_description, '')), ''),
+          coalesce(p_priority, 'medium'), v_dept, v_zone, v_lat, v_lon, p_assignee, auth.uid(), p_recommendation, p_anomaly,
+          p_complaint, p_due)
+  returning id into v_id;
+  return jsonb_build_object('id', v_id, 'reference', v_ref);
+end $$;
+
+create or replace function public.task_action(p_id uuid, p_action text, p_assignee uuid default null) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  t       work_tasks;
+  v_staff boolean := app.role() in ('city_admin', 'dept_officer');
+  v_mine  boolean;
+begin
+  select * into t from work_tasks where id = p_id and organization_id = app.org_id() for update;
+  if not found then raise exception 'Task not found' using errcode = 'P0001'; end if;
+  v_mine := t.assignee_id = auth.uid();
+  if v_staff and not v_mine and not app.in_my_department(t.department_id) then
+    raise exception 'This task belongs to another department' using errcode = 'P0001';
+  end if;
+  if p_action = 'start' then
+    if not (v_staff or v_mine) then raise exception 'Only the assignee or an officer can start this task' using errcode = 'P0001'; end if;
+    if t.status <> 'open' then raise exception 'Only an open task can be started' using errcode = 'P0001'; end if;
+    update work_tasks set status = 'in_progress', started_at = now() where id = p_id;
+  elsif p_action = 'complete' then
+    if not (v_staff or v_mine) then raise exception 'Only the assignee or an officer can complete this task' using errcode = 'P0001'; end if;
+    if t.status not in ('open', 'in_progress') then raise exception 'This task is already closed' using errcode = 'P0001'; end if;
+    update work_tasks set status = 'done', completed_at = now(), started_at = coalesce(started_at, now()) where id = p_id;
+  elsif p_action = 'cancel' then
+    if not v_staff then raise exception 'Only officers can cancel tasks' using errcode = 'P0001'; end if;
+    update work_tasks set status = 'cancelled', completed_at = now() where id = p_id;
+  elsif p_action = 'reopen' then
+    if not v_staff then raise exception 'Only officers can reopen tasks' using errcode = 'P0001'; end if;
+    update work_tasks set status = 'open', completed_at = null where id = p_id;
+  elsif p_action = 'reassign' then
+    if not v_staff then raise exception 'Only officers can reassign tasks' using errcode = 'P0001'; end if;
+    if not exists (select 1 from users where id = p_assignee and organization_id = t.organization_id
+                    and role in ('city_admin', 'dept_officer', 'field_worker') and is_active) then
+      raise exception 'Choose a staff member of this organization' using errcode = 'P0001';
+    end if;
+    update work_tasks set assignee_id = p_assignee where id = p_id;
+  else
+    raise exception 'Unknown action %', p_action using errcode = 'P0001';
+  end if;
+  return (select status from work_tasks where id = p_id);
+end $$;
+
+-- a recommendation assigned to someone becomes their task (or moves the existing open one to them)
+create or replace function app.recommendation_task() returns trigger
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if new.status = 'assigned' and new.assignee_id is not null
+     and (old.status is distinct from 'assigned' or old.assignee_id is distinct from new.assignee_id) then
+    update work_tasks set assignee_id = new.assignee_id
+     where recommendation_id = new.id and status in ('open', 'in_progress');
+    if not found then
+      insert into work_tasks (organization_id, reference, kind, title, description, priority, department_id, zone_id,
+                              assignee_id, created_by, recommendation_id)
+      values (new.organization_id, 'TSK-' || lpad(nextval('public.work_task_ref_seq')::text, 6, '0'), 'recommendation',
+              left(new.problem, 160), new.action, new.priority, app.module_department(new.organization_id, new.module),
+              new.zone_id, new.assignee_id, auth.uid(), new.id);
+    end if;
+  elsif new.status in ('completed', 'rejected') and old.status is distinct from new.status then
+    update work_tasks set status = case when new.status = 'completed' then 'done' else 'cancelled' end, completed_at = now()
+     where recommendation_id = new.id and status in ('open', 'in_progress');
+  end if;
+  return new;
+end $$;
+create trigger recommendations_task after update of status, assignee_id on public.recommendations
+  for each row execute function app.recommendation_task();
+
+-- ----------------------------------------------------------------------------------------- inspection reports
+create or replace function public.submit_inspection(
+  p_task uuid, p_complaint uuid, p_condition text, p_findings text, p_action text default null,
+  p_followup boolean default false, p_photo text default null, p_lat float8 default null, p_lon float8 default null,
+  p_complete boolean default false
+) returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_org   uuid := app.org_id();
+  v_staff boolean := app.role() in ('city_admin', 'dept_officer');
+  v_ok    boolean := false;
+  v_id    bigint;
+  v_dept  uuid;
+begin
+  if p_task is null and p_complaint is null then raise exception 'Say which task or complaint this report is for' using errcode = 'P0001'; end if;
+  if coalesce(trim(p_findings), '') = '' then raise exception 'Describe what you found' using errcode = 'P0001'; end if;
+  if p_condition not in ('good', 'minor', 'major', 'critical') then raise exception 'Choose the condition' using errcode = 'P0001'; end if;
+  if p_photo is not null and split_part(p_photo, '/', 1) <> v_org::text then raise exception 'Invalid photo path' using errcode = 'P0001'; end if;
+  if p_task is not null then
+    select assignee_id = auth.uid(), department_id into v_ok, v_dept from work_tasks where id = p_task and organization_id = v_org;
+    if not found then raise exception 'Task not found' using errcode = 'P0001'; end if;
+  else
+    select assignee_id = auth.uid(), department_id into v_ok, v_dept from complaints where id = p_complaint and organization_id = v_org;
+    if not found then raise exception 'Complaint not found' using errcode = 'P0001'; end if;
+  end if;
+  if not (coalesce(v_ok, false) or (v_staff and app.in_my_department(v_dept))) then
+    raise exception 'Only the assigned person or an officer can file this report' using errcode = 'P0001';
+  end if;
+  insert into inspection_reports (organization_id, task_id, complaint_id, author_id, condition, findings, action_taken,
+                                  needs_followup, photo_path, lat, lon)
+  values (v_org, p_task, p_complaint, auth.uid(), p_condition, trim(p_findings), nullif(trim(coalesce(p_action, '')), ''),
+          coalesce(p_followup, false), p_photo, p_lat, p_lon)
+  returning id into v_id;
+  if p_complete and p_task is not null then
+    update work_tasks set status = 'done', completed_at = now(), started_at = coalesce(started_at, now())
+     where id = p_task and status in ('open', 'in_progress');
+  end if;
+  return v_id;
+end $$;
+
+-- ------------------------------------------------------------------------------------------------ reads
+-- My work: open tasks and assigned complaints for the caller; officers also see all open tasks they may see (RLS).
+create or replace function public.work_list(p_scope text default 'mine') returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'tasks', coalesce((select jsonb_agg(jsonb_build_object(
+               'id', t.id, 'reference', t.reference, 'kind', t.kind, 'title', t.title, 'priority', t.priority, 'status', t.status,
+               'ward', z.code, 'assignee', u.full_name, 'department', d.name, 'due_at', t.due_at, 'created_at', t.created_at,
+               'reports', (select count(*) from inspection_reports r where r.task_id = t.id))
+               order by case t.status when 'in_progress' then 1 when 'open' then 2 else 3 end,
+                        case t.priority when 'critical' then 1 when 'high' then 2 when 'medium' then 3 else 4 end, t.created_at)
+             from work_tasks t left join city_zones z on z.id = t.zone_id left join users u on u.id = t.assignee_id
+             left join departments d on d.id = t.department_id
+            where (p_scope = 'all' or t.assignee_id = auth.uid())
+              and (p_scope = 'all' or t.status in ('open', 'in_progress'))), '[]'::jsonb),
+    'complaints', coalesce((select jsonb_agg(jsonb_build_object(
+               'id', c.id, 'reference', c.reference, 'category', cc.name, 'status', c.status, 'severity', c.severity,
+               'ward', z.code, 'description', left(c.description, 120), 'created_at', c.created_at)
+               order by case c.severity when 'critical' then 1 when 'high' then 2 when 'medium' then 3 else 4 end, c.created_at)
+             from complaints c left join complaint_categories cc on cc.id = c.category_id left join city_zones z on z.id = c.zone_id
+            where c.assignee_id = auth.uid() and c.status in ('assigned', 'in_progress')), '[]'::jsonb))
+$$;
+
+create or replace function public.task_detail(p_id uuid) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'task', (select to_jsonb(t) - 'organization_id' || jsonb_build_object(
+                      'ward', z.name, 'assignee', u.full_name, 'department', d.name, 'created_by_name', cb.full_name,
+                      'recommendation', (select jsonb_build_object('id', r.id, 'problem', r.problem, 'action', r.action, 'basis', r.basis)
+                                           from recommendations r where r.id = t.recommendation_id),
+                      'anomaly', (select jsonb_build_object('id', a.id, 'pattern', a.pattern, 'level', a.level, 'status', a.status,
+                                                            'sensor', s.code, 'evidence', a.evidence)
+                                    from water_anomalies a join water_sensors s on s.id = a.sensor_id where a.id = t.anomaly_id),
+                      'complaint', (select jsonb_build_object('id', c.id, 'reference', c.reference, 'description', c.description)
+                                      from complaints c where c.id = t.complaint_id))
+               from work_tasks t left join city_zones z on z.id = t.zone_id left join users u on u.id = t.assignee_id
+               left join departments d on d.id = t.department_id left join users cb on cb.id = t.created_by
+              where t.id = p_id),
+    'reports', coalesce((select jsonb_agg(jsonb_build_object('id', r.id, 'condition', r.condition, 'findings', r.findings,
+                                                             'action_taken', r.action_taken, 'needs_followup', r.needs_followup,
+                                                             'photo_path', r.photo_path, 'lat', r.lat, 'lon', r.lon,
+                                                             'author', u.full_name, 'created_at', r.created_at) order by r.created_at)
+                           from inspection_reports r left join users u on u.id = r.author_id where r.task_id = p_id), '[]'::jsonb),
+    'staff', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'name', full_name, 'role', role) order by full_name)
+                         from users where role in ('city_admin', 'dept_officer', 'field_worker') and is_active), '[]'::jsonb))
+$$;
+
+create or replace function public.complaint_reports(p_complaint uuid) returns jsonb
+language sql stable set search_path = public, extensions as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', r.id, 'condition', r.condition, 'findings', r.findings,
+                                               'action_taken', r.action_taken, 'needs_followup', r.needs_followup,
+                                               'photo_path', r.photo_path, 'author', u.full_name, 'created_at', r.created_at)
+                            order by r.created_at), '[]'::jsonb)
+    from inspection_reports r left join users u on u.id = r.author_id
+   where r.complaint_id = p_complaint
+$$;
+
+-- ------------------------------------------------------------------------------------------------ invitations
+create or replace function public.invitation_create(p_email text, p_role text, p_department uuid default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_org   uuid := app.org_id();
+  v_email text := lower(trim(p_email));
+  v_limit int  := app.plan_limit(v_org, 'max_users');
+  v_used  int;
+  v_inv   invitations;
+begin
+  if app.role() <> 'city_admin' then raise exception 'Only a City Administrator can invite people' using errcode = 'P0001'; end if;
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Enter a valid email address' using errcode = 'P0001'; end if;
+  if p_role not in ('city_admin', 'dept_officer', 'field_worker') then raise exception 'Choose a staff role' using errcode = 'P0001'; end if;
+  if p_department is not null and not exists (select 1 from departments where id = p_department and organization_id = v_org) then
+    raise exception 'Unknown department' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from users where lower(email) = v_email and organization_id = v_org) then
+    raise exception '% is already a member of this workspace', v_email using errcode = 'P0001';
+  end if;
+  select count(*) into v_used from (
+    select id from users where organization_id = v_org and role <> 'citizen' and is_active
+    union all
+    select id from invitations where organization_id = v_org and accepted_at is null and expires_at > now() and lower(email) <> v_email) s;
+  if v_limit is not null and v_used >= v_limit then
+    raise exception 'Plan limit reached: this plan allows % staff users, counting pending invitations', v_limit using errcode = 'P0001';
+  end if;
+  delete from invitations where organization_id = v_org and lower(email) = v_email and accepted_at is null;
+  insert into invitations (organization_id, email, role, department_id, invited_by)
+  values (v_org, v_email, p_role, p_department, auth.uid()) returning * into v_inv;
+  return jsonb_build_object('id', v_inv.id, 'email', v_inv.email, 'expires_at', v_inv.expires_at);
+end $$;
+
+-- the invited person, signed in from the invitation email, joins the organization that invited them
+create or replace function public.accept_invitation(p_full_name text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_uid   uuid := auth.uid();
+  v_email text;
+  v_inv   invitations;
+begin
+  if v_uid is null then raise exception 'Sign in from the invitation email first' using errcode = 'P0001'; end if;
+  if coalesce(trim(p_full_name), '') = '' then raise exception 'Enter your name' using errcode = 'P0001'; end if;
+  select lower(email) into v_email from auth.users where id = v_uid;
+  if exists (select 1 from users where id = v_uid) then raise exception 'This account already belongs to a workspace' using errcode = 'P0001'; end if;
+  select * into v_inv from invitations
+   where lower(email) = v_email and accepted_at is null and expires_at > now()
+   order by created_at desc limit 1;
+  if not found then raise exception 'No open invitation for %. Ask your administrator to invite you again.', v_email using errcode = 'P0001'; end if;
+  insert into users (id, organization_id, role, department_id, full_name, email)
+  values (v_uid, v_inv.organization_id, v_inv.role, v_inv.department_id, trim(p_full_name), v_email);
+  update invitations set accepted_at = now() where id = v_inv.id;
+  return jsonb_build_object('organization_id', v_inv.organization_id, 'role', v_inv.role);
+end $$;
+
+create or replace function public.invitation_revoke(p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if app.role() <> 'city_admin' then raise exception 'Only a City Administrator can revoke invitations' using errcode = 'P0001'; end if;
+  delete from invitations where id = p_id and organization_id = app.org_id() and accepted_at is null;
+end $$;
+
+revoke all on function public.task_create(text, text, text, text, uuid, timestamptz, uuid, bigint, uuid), public.task_action(uuid, text, uuid),
+  public.submit_inspection(uuid, uuid, text, text, text, boolean, text, float8, float8, boolean), public.work_list(text),
+  public.task_detail(uuid), public.complaint_reports(uuid), public.invitation_create(text, text, uuid),
+  public.accept_invitation(text), public.invitation_revoke(uuid) from public, anon;
+grant execute on function public.task_create(text, text, text, text, uuid, timestamptz, uuid, bigint, uuid), public.task_action(uuid, text, uuid),
+  public.submit_inspection(uuid, uuid, text, text, text, boolean, text, float8, float8, boolean), public.work_list(text),
+  public.task_detail(uuid), public.complaint_reports(uuid), public.invitation_create(text, text, uuid),
+  public.accept_invitation(text), public.invitation_revoke(uuid) to authenticated;
+revoke all on function app.module_department(uuid, text) from public, anon, authenticated;

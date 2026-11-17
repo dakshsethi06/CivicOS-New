@@ -43,7 +43,10 @@ document ingestion go through `apps/api`, which runs every query as the signed-i
    (`all_migrations.sql` is built from `supabase/migrations/` by `python3 supabase/build_all_migrations.py`.)
    To add the three-year forecasts to a project set up before them, without a reset, run
    `supabase/migrations/0009_mumbai_models.sql` and then `0016_three_year_forecasts.sql`; for semantic search,
-   `0017_rag_vectors.sql`; for the water, waste and traffic operations modules, `0018_operations.sql`.
+   `0017_rag_vectors.sql`; for the water, waste and traffic operations modules, `0018_operations.sql`; then
+   `0019_complaint_ai.sql`, `0020_assistant_tools.sql` and `0021_field_teams.sql`.
+   Alternatively, from `apps/api`: `alembic upgrade head` applies whatever is missing and records it
+   (`alembic stamp <number>` first, to mark what you already ran by hand).
 3. Copy the project URL, anon key and service-role key from **Project Settings -> API**.
 
 ### 2. Web app
@@ -101,6 +104,9 @@ run `uvicorn app.main:app` or `docker compose up`, and set `CIVICOS_API_URL=http
   each tested on past years one, two and three years ahead (details in `data/mumbai/ml/README.md`), a scatter
   plot of any two ward indicators, their correlation matrix, and a flow chart of complaints by issue into closed / not closed.
 - **Complaints:** real reports from real users (see below).
+- **Tasks:** inspections and repairs assigned to staff (created by officers, from a water anomaly, or automatically when
+  a recommendation is assigned). Field workers see "My work", start a task, and file an inspection report with the
+  condition found, findings, action taken, a photo and their location.
 - **Assistant:** answers questions from uploaded documents and the published figures, with citations (see below).
 - **Insights:** rule-based recommendations with their evidence; officers accept, reject, assign or complete them.
   Rules cover the published figures and the operations models (water anomalies, pipes at risk, reservoirs, bins about
@@ -143,8 +149,34 @@ The complaint list starts empty and holds only what people submit through CivicO
 Every step is recorded in the complaint's history. Who may do what is enforced in the database
 (`complaint_action`), and a resident sees only their own complaints.
 
-These suggestions are fixed rules, not trained models: there is no real complaint text to train on yet.
-Keywords and default priorities live in `complaint_categories` and can be edited.
+**AI analysis** (with `apps/api` and a Gemini key), run on submission and shown to staff on the complaint page:
+
+- **Category by meaning:** the text is compared with each category's description and examples using Gemini
+  embeddings, so "gaddha near the station" lands in Road damage without the keyword. A category is suggested only
+  when it is clearly ahead (similarity 0.80 or more and 0.02 ahead of the next; thresholds measured on Gemini's
+  embeddings, where unrelated civic texts score about 0.74).
+- **Duplicates by meaning and distance:** open complaints within 150 m whose text means the same are listed; one is
+  linked as a possible duplicate at similarity 0.915 or more and in the same category (the same problem worded
+  differently scored 0.92 to 0.96; different problems at the same place up to 0.89).
+- **Photo check:** Gemini vision reports visible road damage (pothole, cracks, broken paving), how severe it looks, and
+  whether the photo matches the description. Severe damage raises the suggested priority one step. This is the model's
+  own judgement, not a calibrated probability.
+- **Time to close:** once 10 complaints of a category have been resolved in CivicOS, their median replaces the
+  published average.
+
+The rule-based suggestions still run without the API. Keywords, descriptions, examples and default priorities live in
+`complaint_categories` and can be edited. Officers confirm or change everything when assigning.
+
+## Teams and departments
+
+- **Invitations:** under Settings an administrator invites by email with a role and department. The person opens the
+  link, sets their name and password at `/auth/accept`, and joins. Pending invitations count towards the plan's staff
+  limit. If Supabase cannot send the email (its built-in mailer allows only a few an hour; add your own SMTP under
+  Authentication -> Emails for more), the administrator gets a one-time link to share. Add your site's
+  `/auth/accept` URL under Authentication -> URL Configuration -> Redirect URLs.
+- **Departments:** a Department Officer placed in a department sees and acts on only that department's complaints and
+  tasks (plus those with none). Enforced in the database for every read and action. Officers without a department and
+  administrators see everything.
 
 **Roles to try it:** register a municipality (City Administrator), add a Department Officer and a Field Worker
 under **Settings -> Add a team member**, and create a resident at `/join`. Residents do not count towards
@@ -213,6 +245,12 @@ relevant is found it says: "The available documents and published figures do not
 
 Residents see only documents marked Public. Conversations are private to the person who asked.
 
+With `apps/api` the assistant also has tools for the water, waste and traffic operations (meters, anomalies, pipe risk,
+reservoirs, bins, routes, congestion, incidents) and for places (`nearby`: ward, complaints, anomalies, risky pipes,
+bins and incidents around a point or a complaint, using PostGIS). Document search fetches more candidates and a fast
+Gemini model re-ranks them by how well they answer the question. Answers that cite operations figures carry a chart of
+them, and say when the figures are demonstration data.
+
 ## Recommendations
 
 `app.generate_recommendations` applies six fixed rules: slow complaint closure, short water supply, unfit water
@@ -245,10 +283,11 @@ priority, not a confidence percentage, because they are rules, not statistical e
   its own meters, bin sensors and traffic detectors (or a live traffic API such as TomTom, which builds history only
   from the day collection starts).
 - **Traffic microsimulation:** the what-if model is a macroscopic peak-hour assignment, not SUMO.
-- **Pothole detection on photos** and OCR for scanned documents. Semantic search needs `apps/api` running; without it,
-  retrieval is keyword-based.
+- **OCR for scanned documents.** Semantic search, complaint AI and the photo check need `apps/api` running; without
+  it, retrieval is keyword-based and complaint suggestions are rule-based.
+- **A trained pothole detector:** photos are checked by a general vision model (Gemini), not a model trained on
+  labelled Mumbai road images, which do not exist in this project.
 - **Payments:** plan changes are test mode only. **Email invitations:** admins create staff accounts with a temporary password.
-- **Department scoping:** officers see all complaints in their organization, not only their department's.
 - When a user's role changes, their JWT picks it up at the next token refresh (up to an hour) or next sign-in.
 
 ## What has and has not been tested

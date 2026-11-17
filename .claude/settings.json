@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python \"C:/Users/daksh/AppData/Local/Temp/claude/59ceb322e60fdc76/b5394a89-7977-467c-a8f2-ed1a23a9bc24/scratchpad/edit_settings.py\")",
+      "Bash(python \"C:/Users/daksh/AppData/Local/Temp/claude/59ceb322e60fdc76/b5394a89-7977-467c-a8f2-ed1a23a9bc24/scratchpad/edit_water.py\")",
+      "Bash(python \"C:/Users/daksh/AppData/Local/Temp/claude/59ceb322e60fdc76/b5394a89-7977-467c-a8f2-ed1a23a9bc24/scratchpad/edit_docs.py\")"
+    ]
+  }
+}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AlertTriangle, Droplets, GitBranch, Waves } from "lucide-react";
 import { reviewAnomaly } from "@/app/(app)/ops-actions";
+import { createTask } from "@/app/(app)/tasks/actions";
+import { createClient } from "@/lib/supabase/server";
 import { BarSeriesChart, ChartCard, EmptyChart } from "@/components/dashboard/charts";
 import { KpiCard } from "@/components/dashboard/panels";
 import { ModuleFilters } from "@/components/module-filters";
@@ -44,6 +46,10 @@ export default async function WaterNetworkPage({ searchParams }: PageProps<"/wat
   const { data: d, error, status, wards, zones, apiReady } = await loadOps<WaterOps>("ops_water", filters.zone);
   const hasData = Boolean(d && d.pipelines.length);
   const officer = session.role === "city_admin" || session.role === "dept_officer";
+  const staffList = officer
+    ? ((await (await createClient()).from("users").select("id, full_name").in("role", ["dept_officer", "field_worker", "city_admin"])
+        .eq("is_active", true).order("full_name")).data ?? [])
+    : [];
 
   const header = (
     <>
@@ -199,6 +205,21 @@ export default async function WaterNetworkPage({ searchParams }: PageProps<"/wat
                           </form>
                         ))}
                       </div>
+                    ) : null}
+                    {officer && (a.status === "open" || a.status === "inspecting") ? (
+                      <form action={createTask} className="mt-1.5 flex gap-1">
+                        <input type="hidden" name="back" value="/water/network" />
+                        <input type="hidden" name="anomaly" value={a.id} />
+                        <input type="hidden" name="kind" value="inspection" />
+                        <input type="hidden" name="priority" value={a.level === "high" ? "high" : "medium"} />
+                        <input type="hidden" name="title" value={`Inspect pipeline at meter ${a.sensor} (${a.level} anomaly)`} />
+                        <input type="hidden" name="description" value={`${a.pattern} Consumption ${a.evidence.consumption_vs_baseline_pct ?? "?"}% against usual, pressure change ${a.evidence.pressure_change_bar ?? "?"} bar. Check for leaks or bursts and report what you find.`} />
+                        <select name="assignee" required defaultValue="" aria-label="Assign inspection to" className="min-w-0 rounded border border-line bg-raised px-1 py-0.5 text-xs text-ink">
+                          <option value="" disabled>Send to…</option>
+                          {staffList.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                        </select>
+                        <button type="submit" className="rounded border border-line px-2 py-0.5 text-xs text-muted hover:text-ink">Task</button>
+                      </form>
                     ) : null}
                   </td>
                 </tr>
