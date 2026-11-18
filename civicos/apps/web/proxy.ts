@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/join"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/join", "/auth/accept"];   // /auth/accept: the invitation link signs in there
 
 /** Refreshes the Supabase session cookie and guards signed-in routes. */
 export async function proxy(request: NextRequest) {
@@ -35,7 +35,9 @@ export async function proxy(request: NextRequest) {
     to.search = "";
     return NextResponse.redirect(to);
   }
-  if (user && (path === "/login" || path === "/register" || path === "/join")) {
+  // only accounts that belong to an organization are sent on to the dashboard; others (an invitation not yet accepted)
+  // would bounce between the dashboard and sign-in
+  if (user && user.app_metadata?.org_id && (path === "/login" || path === "/register" || path === "/join")) {
     const to = request.nextUrl.clone();
     to.pathname = "/dashboard";
     to.search = "";

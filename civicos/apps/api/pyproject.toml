@@ -1,0 +1,10 @@
+[project]
+name = "civicos-api"
+version = "0.1.0"
+description = "CivicOS backend: RAG ingestion, semantic retrieval and the hybrid assistant"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]

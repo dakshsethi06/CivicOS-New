@@ -10,8 +10,11 @@ P=(psql "$DB" -v ON_ERROR_STOP=1 -q)
 if [[ "${1:-}" == "shim" ]]; then
   "${P[@]}" -f shim_vanilla_postgres.sql
   for f in $(ls ../migrations/*.sql | grep -v -e 0001_ -e _storage); do   # extensions and Supabase Storage do not exist on plain Postgres
-    # geometry(...) columns become text and GiST indexes are dropped: test-only rewrite
-    sed -E -e 's/geometry\([^)]*\)/text/g' -e '/using gist/d' "$f" | "${P[@]}"
+    # geometry(...) columns become text, vector(n) becomes float8[], GiST and HNSW indexes are dropped: test-only rewrite
+    sed -E -e 's/geometry\([^)]*\)/text/g' -e 's/vector\([0-9]+\)/float8[]/g' -e '/using (gist|hnsw)/d' "$f" | "${P[@]}"
   done
+  # the tests build vectors too
+  sed -E -e 's/vector\([0-9]+\)/float8[]/g' rls_isolation.sql | "${P[@]}"
+else
+  "${P[@]}" -f rls_isolation.sql
 fi
-"${P[@]}" -f rls_isolation.sql

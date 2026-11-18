@@ -1,5 +1,5 @@
 {
- "trained_at": "2026-11-15",
+ "trained_at": "2026-11-16",
  "models": [
   {
    "id": "ward-groups-2025",
@@ -150,8 +150,8 @@
    "id": "complaints-forecast-2026",
    "name": "Complaint forecasts",
    "kind": "forecast",
-   "method": "Per family of series, the best of three simple methods by rolling backtest; 80% interval from that method's backtest errors",
-   "description": "Predicts how many complaints will be registered in 2026, with a range. Built on ten yearly figures per series, so the ranges are wide on purpose.",
+   "method": "Per family of series and per forecast year, the best of three simple methods by rolling backtest at that distance (1, 2 or 3 years ahead); each year's 80% interval from that method's backtest errors",
+   "description": "Predicts how many complaints will be registered in 2026, 2027 and 2028, with a range that widens each year. Built on ten yearly figures per series, so the ranges are wide on purpose.",
    "params": {
     "methods": {
      "naive": "Last year's value",
@@ -164,6 +164,11 @@
      2024,
      2025
     ],
+    "forecast_years": [
+     2026,
+     2027,
+     2028
+    ],
     "families": {
      "ward_total": {
       "label": "All complaints, by ward",
@@ -175,19 +180,77 @@
        2025
       ],
       "chosen": "trend",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "trend",
+       "2": "mean3",
+       "3": "mean3"
+      },
+      "horizons_tested": [
+       1,
+       2,
+       3
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "2": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "3": [
+        2022,
+        2023,
+        2024,
+        2025
+       ]
+      },
+      "mae": {
+       "naive": 590.781,
+       "mean3": 589.111,
+       "trend": 489.62
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "backtest",
+       "3": "backtest"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 11.7,
        "mean3": 11.5,
        "trend": 9.7
       },
-      "mae": {
-       "naive": 590.8,
-       "mean3": 589.1,
-       "trend": 489.6
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 11.7,
+        "mean3": 11.5,
+        "trend": 9.7
+       },
+       "2": {
+        "naive": 14.6,
+        "mean3": 13.7,
+        "trend": 15.1
+       },
+       "3": {
+        "naive": 20.8,
+        "mean3": 12.8,
+        "trend": 29.3
+       }
       },
       "interval_pct": 14.2,
-      "baseline": "naive",
-      "improvement_vs_naive_pct": 17.1
+      "interval_pct_by_horizon": {
+       "1": 14.2,
+       "2": 22.0,
+       "3": 22.0
+      },
+      "improvement_vs_naive_pct": 17.3
      },
      "ward_swm": {
       "label": "Solid waste complaints, by ward",
@@ -199,18 +262,76 @@
        2025
       ],
       "chosen": "naive",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "naive",
+       "2": "naive",
+       "3": "mean3"
+      },
+      "horizons_tested": [
+       1,
+       2,
+       3
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "2": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "3": [
+        2022,
+        2023,
+        2024,
+        2025
+       ]
+      },
+      "mae": {
+       "naive": 239.688,
+       "mean3": 307.646,
+       "trend": 244.207
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "backtest",
+       "3": "backtest"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 23.4,
        "mean3": 28.3,
        "trend": 23.9
       },
-      "mae": {
-       "naive": 239.7,
-       "mean3": 307.6,
-       "trend": 244.2
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 23.4,
+        "mean3": 28.3,
+        "trend": 23.9
+       },
+       "2": {
+        "naive": 31.7,
+        "mean3": 37.1,
+        "trend": 34.5
+       },
+       "3": {
+        "naive": 46.9,
+        "mean3": 38.4,
+        "trend": 52.4
+       }
       },
       "interval_pct": 43.6,
-      "baseline": "naive",
+      "interval_pct_by_horizon": {
+       "1": 43.6,
+       "2": 54.1,
+       "3": 54.1
+      },
       "improvement_vs_naive_pct": 0.0
      },
      "ward_drainage": {
@@ -223,18 +344,76 @@
        2025
       ],
       "chosen": "naive",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "naive",
+       "2": "mean3",
+       "3": "mean3"
+      },
+      "horizons_tested": [
+       1,
+       2,
+       3
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "2": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "3": [
+        2022,
+        2023,
+        2024,
+        2025
+       ]
+      },
+      "mae": {
+       "naive": 118.438,
+       "mean3": 122.885,
+       "trend": 120.653
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "backtest",
+       "3": "backtest"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 22.2,
        "mean3": 30.5,
        "trend": 32.0
       },
-      "mae": {
-       "naive": 118.4,
-       "mean3": 122.9,
-       "trend": 120.7
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 22.2,
+        "mean3": 30.5,
+        "trend": 32.0
+       },
+       "2": {
+        "naive": 38.4,
+        "mean3": 36.0,
+        "trend": 48.3
+       },
+       "3": {
+        "naive": 45.6,
+        "mean3": 39.5,
+        "trend": 77.3
+       }
       },
       "interval_pct": 27.4,
-      "baseline": "naive",
+      "interval_pct_by_horizon": {
+       "1": 27.4,
+       "2": 29.8,
+       "3": 34.8
+      },
       "improvement_vs_naive_pct": 0.0
      },
      "city_issue": {
@@ -247,19 +426,77 @@
        2025
       ],
       "chosen": "mean3",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "mean3",
+       "2": "mean3",
+       "3": "mean3"
+      },
+      "horizons_tested": [
+       1,
+       2,
+       3
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "2": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "3": [
+        2022,
+        2023,
+        2024,
+        2025
+       ]
+      },
+      "mae": {
+       "naive": 903.167,
+       "mean3": 1036.634,
+       "trend": 1038.37
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "backtest",
+       "3": "backtest"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 16.8,
        "mean3": 16.5,
        "trend": 18.6
       },
-      "mae": {
-       "naive": 903.2,
-       "mean3": 1036.6,
-       "trend": 1038.4
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 16.8,
+        "mean3": 16.5,
+        "trend": 18.6
+       },
+       "2": {
+        "naive": 20.8,
+        "mean3": 19.6,
+        "trend": 26.6
+       },
+       "3": {
+        "naive": 24.8,
+        "mean3": 23.0,
+        "trend": 39.8
+       }
       },
       "interval_pct": 25.7,
-      "baseline": "naive",
-      "improvement_vs_naive_pct": 1.8
+      "interval_pct_by_horizon": {
+       "1": 25.7,
+       "2": 33.7,
+       "3": 36.3
+      },
+      "improvement_vs_naive_pct": 2.1
      },
      "city_total": {
       "label": "City complaints, all issues",
@@ -271,19 +508,77 @@
        2025
       ],
       "chosen": "trend",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "trend",
+       "2": "trend",
+       "3": "mean3"
+      },
+      "horizons_tested": [
+       1,
+       2,
+       3
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "2": [
+        2022,
+        2023,
+        2024,
+        2025
+       ],
+       "3": [
+        2022,
+        2023,
+        2024,
+        2025
+       ]
+      },
+      "mae": {
+       "naive": 12404.0,
+       "mean3": 12903.583,
+       "trend": 7152.952
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "backtest",
+       "3": "backtest"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 10.6,
        "mean3": 10.6,
        "trend": 5.8
       },
-      "mae": {
-       "naive": 12404.0,
-       "mean3": 12903.6,
-       "trend": 7153.0
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 10.6,
+        "mean3": 10.6,
+        "trend": 5.8
+       },
+       "2": {
+        "naive": 13.0,
+        "mean3": 14.5,
+        "trend": 11.9
+       },
+       "3": {
+        "naive": 21.7,
+        "mean3": 12.5,
+        "trend": 25.6
+       }
       },
       "interval_pct": 10.2,
-      "baseline": "naive",
-      "improvement_vs_naive_pct": 45.3
+      "interval_pct_by_horizon": {
+       "1": 10.2,
+       "2": 14.8,
+       "3": 16.4
+      },
+      "improvement_vs_naive_pct": 44.8
      }
     }
    },
@@ -315,8 +610,8 @@
    "id": "waste-forecast-2026",
    "name": "Waste forecasts",
    "kind": "forecast",
-   "method": "Best of three simple methods by backtest on 2024 and 2025; 80% interval from that method's backtest errors",
-   "description": "Predicts the tonnes of waste BMC will lift per day in 2026, for the city and each ward. Only five years are published, so it is tested on two years and the ranges are wide.",
+   "method": "Best of three simple methods by backtest on 2024 and 2025; 80% interval from that method's backtest errors, widened for 2027 and 2028",
+   "description": "Predicts the tonnes of waste BMC will lift per day in 2026, 2027 and 2028, for the city and each ward. Only five years are published, so only one year ahead could be tested on two years; the 2027 and 2028 ranges are widened from that test.",
    "params": {
     "methods": {
      "naive": "Last year's value",
@@ -327,6 +622,11 @@
      2024,
      2025
     ],
+    "forecast_years": [
+     2026,
+     2027,
+     2028
+    ],
     "families": {
      "ward_waste": {
       "label": "Waste lifted, by ward",
@@ -336,18 +636,54 @@
        2025
       ],
       "chosen": "naive",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "naive",
+       "2": "naive",
+       "3": "naive"
+      },
+      "horizons_tested": [
+       1
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2024,
+        2025
+       ],
+       "2": [
+        2025
+       ],
+       "3": []
+      },
+      "mae": {
+       "naive": 7.562,
+       "mean3": 37.201,
+       "trend": 29.347
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "scaled from 1-year test",
+       "3": "scaled from 1-year test"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 3.7,
        "mean3": 22.0,
        "trend": 17.1
       },
-      "mae": {
-       "naive": 7.6,
-       "mean3": 37.2,
-       "trend": 29.3
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 3.7,
+        "mean3": 22.0,
+        "trend": 17.1
+       }
       },
       "interval_pct": 5.1,
-      "baseline": "naive",
+      "interval_pct_by_horizon": {
+       "1": 5.1,
+       "2": 7.3,
+       "3": 8.9
+      },
       "improvement_vs_naive_pct": 0.0
      },
      "city_waste": {
@@ -358,19 +694,55 @@
        2025
       ],
       "chosen": "trend",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "trend",
+       "2": "trend",
+       "3": "trend"
+      },
+      "horizons_tested": [
+       1
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2024,
+        2025
+       ],
+       "2": [
+        2025
+       ],
+       "3": []
+      },
+      "mae": {
+       "naive": 180.0,
+       "mean3": 370.167,
+       "trend": 134.417
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "scaled from 1-year test",
+       "3": "scaled from 1-year test"
+      },
+      "baseline": "naive",
       "mape_pct": {
        "naive": 2.6,
        "mean3": 5.4,
        "trend": 2.0
       },
-      "mae": {
-       "naive": 180.0,
-       "mean3": 370.2,
-       "trend": 134.4
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 2.6,
+        "mean3": 5.4,
+        "trend": 2.0
+       }
       },
       "interval_pct": 5.1,
-      "baseline": "naive",
-      "improvement_vs_naive_pct": 23.1
+      "interval_pct_by_horizon": {
+       "1": 5.1,
+       "2": 7.3,
+       "3": 8.9
+      },
+      "improvement_vs_naive_pct": 22.6
      }
     }
    },
@@ -390,8 +762,8 @@
    "id": "aqi-forecast-2026",
    "name": "Air-quality forecast",
    "kind": "forecast",
-   "method": "Best of four seasonal methods by forecasting each whole year 2022-2025 from the years before it; 80% interval from that method's errors",
-   "description": "Predicts Mumbai's average AQI for each month of 2026. Air quality follows a strong yearly cycle (worst in winter, best in the monsoon), so every method is built around that cycle.",
+   "method": "For each forecast year, the best of four seasonal methods by forecasting each whole year 2022-2025 from the years up to 1, 2 or 3 years before it; 80% interval from that method's errors at that distance",
+   "description": "Predicts Mumbai's average AQI for each month of 2026, 2027 and 2028. Air quality follows a strong yearly cycle (worst in winter, best in the monsoon), so every method is built around that cycle. Each year uses the method that held up best that many years ahead.",
    "params": {
     "methods": {
      "snaive": "Same month last year",
@@ -405,7 +777,17 @@
      2024,
      2025
     ],
+    "forecast_years": [
+     2026,
+     2027,
+     2028
+    ],
     "chosen": "profile",
+    "chosen_by_horizon": {
+     "1": "profile",
+     "2": "climatology",
+     "3": "smean3"
+    },
     "mape_pct": {
      "snaive": 21.0,
      "smean3": 18.9,
@@ -418,7 +800,32 @@
      "climatology": 16.9,
      "profile": 15.2
     },
+    "mape_pct_by_horizon": {
+     "1": {
+      "snaive": 21.0,
+      "smean3": 18.9,
+      "climatology": 17.0,
+      "profile": 16.1
+     },
+     "2": {
+      "snaive": 23.6,
+      "smean3": 19.0,
+      "climatology": 17.4,
+      "profile": 22.9
+     },
+     "3": {
+      "snaive": 24.1,
+      "smean3": 17.1,
+      "climatology": 17.8,
+      "profile": 23.3
+     }
+    },
     "interval_pct": 30.0,
+    "interval_pct_by_horizon": {
+     "1": 30.0,
+     "2": 30.0,
+     "3": 30.0
+    },
     "backtest": [
      {
       "year": 2022,
@@ -558,6 +965,161 @@
     "improvement_vs_naive_pct": 23.3
    },
    "trained_on": "Monthly average AQI 2016-2025 (120 months); Praja Foundation 2026 report Table 29"
+  },
+  {
+   "id": "water-forecast",
+   "name": "Water forecasts",
+   "kind": "forecast",
+   "method": "Best of three simple methods by backtest on 2023 and 2024; 80% interval from that method's backtest errors, widened for later years",
+   "description": "Predicts the share of drinking-water samples found unfit (by ward and city-wide) and the water drawn and supplied city-wide, for 2025 to 2028. Water figures are published only to 2024, from five years, so only one year ahead could be tested and later ranges are widened from that test.",
+   "params": {
+    "methods": {
+     "naive": "Last year's value",
+     "mean3": "Average of the last three years",
+     "trend": "Straight-line trend over all earlier years"
+    },
+    "backtest_years": [
+     2023,
+     2024
+    ],
+    "forecast_years": [
+     2025,
+     2026,
+     2027,
+     2028
+    ],
+    "families": {
+     "unfit": {
+      "label": "Drinking-water samples unfit, wards and city",
+      "series": 25,
+      "backtest_years": [
+       2023,
+       2024
+      ],
+      "chosen": "mean3",
+      "error": "absolute",
+      "chosen_by_horizon": {
+       "1": "mean3",
+       "2": "mean3",
+       "3": "mean3",
+       "4": "mean3"
+      },
+      "horizons_tested": [
+       1
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2023,
+        2024
+       ],
+       "2": [
+        2024
+       ],
+       "3": [],
+       "4": []
+      },
+      "mae": {
+       "naive": 0.54,
+       "mean3": 0.434,
+       "trend": 0.527
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "scaled from 1-year test",
+       "3": "scaled from 1-year test",
+       "4": "scaled from 1-year test"
+      },
+      "baseline": "naive",
+      "mae_by_horizon": {
+       "1": {
+        "naive": 0.54,
+        "mean3": 0.434,
+        "trend": 0.527
+       }
+      },
+      "interval_abs": 0.639,
+      "interval_abs_by_horizon": {
+       "1": 0.639,
+       "2": 0.903,
+       "3": 1.106,
+       "4": 1.277
+      }
+     },
+     "city_water_fy": {
+      "label": "Water drawn and supplied, city",
+      "series": 2,
+      "backtest_years": [
+       2023,
+       2024
+      ],
+      "chosen": "mean3",
+      "error": "relative",
+      "chosen_by_horizon": {
+       "1": "mean3",
+       "2": "mean3",
+       "3": "mean3",
+       "4": "mean3"
+      },
+      "horizons_tested": [
+       1
+      ],
+      "test_years_by_horizon": {
+       "1": [
+        2023,
+        2024
+       ],
+       "2": [
+        2024
+       ],
+       "3": [],
+       "4": []
+      },
+      "mae": {
+       "naive": 62.25,
+       "mean3": 50.167,
+       "trend": 136.458
+      },
+      "interval_basis_by_horizon": {
+       "1": "backtest",
+       "2": "scaled from 1-year test",
+       "3": "scaled from 1-year test",
+       "4": "scaled from 1-year test"
+      },
+      "baseline": "naive",
+      "mape_pct": {
+       "naive": 1.5,
+       "mean3": 1.2,
+       "trend": 3.2
+      },
+      "mape_pct_by_horizon": {
+       "1": {
+        "naive": 1.5,
+        "mean3": 1.2,
+        "trend": 3.2
+       }
+      },
+      "interval_pct": 1.8,
+      "interval_pct_by_horizon": {
+       "1": 1.8,
+       "2": 2.6,
+       "3": 3.2,
+       "4": 3.7
+      },
+      "improvement_vs_naive_pct": 17.1
+     }
+    }
+   },
+   "metrics": {
+    "unfit": {
+     "mae_points": 0.434,
+     "naive_mae_points": 0.54
+    },
+    "city_water_fy": {
+     "mape_pct": 1.2,
+     "naive_mape_pct": 1.5
+    }
+   },
+   "trained_on": "Drinking-water samples unfit 2020-2024 (Praja Foundation 2025 report, Table 7); water drawn and supplied FY 2019-20 to 2023-24 (Table 2)"
   }
  ],
  "clusters": [
@@ -1108,6 +1670,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2027,
+   "value": 2554,
+   "lower": 1993,
+   "upper": 3115,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2028,
+   "value": 2554,
+   "lower": 1993,
+   "upper": 3115,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "B",
    "category": null,
    "year": 2026,
@@ -1115,6 +1703,32 @@
    "lower": 2841,
    "upper": 3781,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2027,
+   "value": 3129,
+   "lower": 2442,
+   "upper": 3817,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2028,
+   "value": 3129,
+   "lower": 2442,
+   "upper": 3817,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1134,6 +1748,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2027,
+   "value": 3580,
+   "lower": 2794,
+   "upper": 4367,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2028,
+   "value": 3580,
+   "lower": 2794,
+   "upper": 4367,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "D",
    "category": null,
    "year": 2026,
@@ -1141,6 +1781,32 @@
    "lower": 3067,
    "upper": 4082,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2027,
+   "value": 3876,
+   "lower": 3024,
+   "upper": 4727,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2028,
+   "value": 3876,
+   "lower": 3024,
+   "upper": 4727,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1160,6 +1826,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2027,
+   "value": 4503,
+   "lower": 3513,
+   "upper": 5492,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2028,
+   "value": 4503,
+   "lower": 3513,
+   "upper": 5492,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "F/N",
    "category": null,
    "year": 2026,
@@ -1167,6 +1859,32 @@
    "lower": 3824,
    "upper": 5090,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2027,
+   "value": 4325,
+   "lower": 3375,
+   "upper": 5276,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2028,
+   "value": 4325,
+   "lower": 3375,
+   "upper": 5276,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1186,6 +1904,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2027,
+   "value": 2754,
+   "lower": 2149,
+   "upper": 3359,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2028,
+   "value": 2754,
+   "lower": 2149,
+   "upper": 3359,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "G/N",
    "category": null,
    "year": 2026,
@@ -1193,6 +1937,32 @@
    "lower": 4470,
    "upper": 5950,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2027,
+   "value": 5206,
+   "lower": 4062,
+   "upper": 6350,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2028,
+   "value": 5206,
+   "lower": 4062,
+   "upper": 6350,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1212,6 +1982,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2027,
+   "value": 3196,
+   "lower": 2494,
+   "upper": 3898,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2028,
+   "value": 3196,
+   "lower": 2494,
+   "upper": 3898,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "H/E",
    "category": null,
    "year": 2026,
@@ -1219,6 +2015,32 @@
    "lower": 3722,
    "upper": 4954,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2027,
+   "value": 4195,
+   "lower": 3274,
+   "upper": 5117,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2028,
+   "value": 4195,
+   "lower": 3274,
+   "upper": 5117,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1238,6 +2060,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2027,
+   "value": 5062,
+   "lower": 3950,
+   "upper": 6174,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2028,
+   "value": 5062,
+   "lower": 3950,
+   "upper": 6174,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "K/E",
    "category": null,
    "year": 2026,
@@ -1245,6 +2093,32 @@
    "lower": 7742,
    "upper": 10304,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2027,
+   "value": 8732,
+   "lower": 6814,
+   "upper": 10650,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2028,
+   "value": 8732,
+   "lower": 6814,
+   "upper": 10650,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1264,6 +2138,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2027,
+   "value": 8306,
+   "lower": 6481,
+   "upper": 10131,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2028,
+   "value": 8306,
+   "lower": 6481,
+   "upper": 10131,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "L",
    "category": null,
    "year": 2026,
@@ -1271,6 +2171,32 @@
    "lower": 5877,
    "upper": 7822,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2027,
+   "value": 7323,
+   "lower": 5714,
+   "upper": 8931,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2028,
+   "value": 7323,
+   "lower": 5714,
+   "upper": 8931,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1290,6 +2216,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2027,
+   "value": 4409,
+   "lower": 3440,
+   "upper": 5378,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2028,
+   "value": 4409,
+   "lower": 3440,
+   "upper": 5378,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "M/W",
    "category": null,
    "year": 2026,
@@ -1297,6 +2249,32 @@
    "lower": 3739,
    "upper": 4976,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2027,
+   "value": 4026,
+   "lower": 3141,
+   "upper": 4910,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2028,
+   "value": 4026,
+   "lower": 3141,
+   "upper": 4910,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1316,6 +2294,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2027,
+   "value": 6166,
+   "lower": 4811,
+   "upper": 7520,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2028,
+   "value": 6166,
+   "lower": 4811,
+   "upper": 7520,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "P/N",
    "category": null,
    "year": 2026,
@@ -1323,6 +2327,32 @@
    "lower": 6957,
    "upper": 9259,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2027,
+   "value": 7647,
+   "lower": 5967,
+   "upper": 9327,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2028,
+   "value": 7647,
+   "lower": 5967,
+   "upper": 9327,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1342,6 +2372,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2027,
+   "value": 4933,
+   "lower": 3849,
+   "upper": 6017,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2028,
+   "value": 4933,
+   "lower": 3849,
+   "upper": 6017,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/C",
    "category": null,
    "year": 2026,
@@ -1349,6 +2405,32 @@
    "lower": 4940,
    "upper": 6576,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2027,
+   "value": 5591,
+   "lower": 4362,
+   "upper": 6819,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2028,
+   "value": 5591,
+   "lower": 4362,
+   "upper": 6819,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1368,6 +2450,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2027,
+   "value": 3099,
+   "lower": 2418,
+   "upper": 3779,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2028,
+   "value": 3099,
+   "lower": 2418,
+   "upper": 3779,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/S",
    "category": null,
    "year": 2026,
@@ -1375,6 +2483,32 @@
    "lower": 4424,
    "upper": 5888,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2027,
+   "value": 5135,
+   "lower": 4007,
+   "upper": 6264,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2028,
+   "value": 5135,
+   "lower": 4007,
+   "upper": 6264,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1394,6 +2528,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2027,
+   "value": 8662,
+   "lower": 6759,
+   "upper": 10565,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2028,
+   "value": 8662,
+   "lower": 6759,
+   "upper": 10565,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "T",
    "category": null,
    "year": 2026,
@@ -1401,6 +2561,32 @@
    "lower": 2596,
    "upper": 3455,
    "method": "trend",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2027,
+   "value": 2964,
+   "lower": 2313,
+   "upper": 3616,
+   "method": "mean3",
+   "family": "ward_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2028,
+   "value": 2964,
+   "lower": 2313,
+   "upper": 3616,
+   "method": "mean3",
    "family": "ward_total"
   },
   {
@@ -1420,6 +2606,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "A",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 364,
+   "lower": 167,
+   "upper": 561,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "A",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 345,
+   "lower": 158,
+   "upper": 532,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "B",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1427,6 +2639,32 @@
    "lower": 312,
    "upper": 794,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 553,
+   "lower": 254,
+   "upper": 852,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 578,
+   "lower": 265,
+   "upper": 891,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1446,6 +2684,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "C",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1208,
+   "lower": 554,
+   "upper": 1862,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "C",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1263,
+   "lower": 580,
+   "upper": 1947,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "D",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1453,6 +2717,32 @@
    "lower": 453,
    "upper": 1153,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 803,
+   "lower": 368,
+   "upper": 1238,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 783,
+   "lower": 359,
+   "upper": 1207,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1472,6 +2762,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1559,
+   "lower": 715,
+   "upper": 2403,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1346,
+   "lower": 617,
+   "upper": 2074,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "F/N",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1479,6 +2795,32 @@
    "lower": 676,
    "upper": 1720,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1198,
+   "lower": 550,
+   "upper": 1846,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1254,
+   "lower": 576,
+   "upper": 1933,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1498,6 +2840,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "F/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 526,
+   "lower": 241,
+   "upper": 811,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 536,
+   "lower": 246,
+   "upper": 826,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "G/N",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1505,6 +2873,32 @@
    "lower": 742,
    "upper": 1888,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1315,
+   "lower": 603,
+   "upper": 2027,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1198,
+   "lower": 550,
+   "upper": 1846,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1524,6 +2918,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "G/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 536,
+   "lower": 246,
+   "upper": 826,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 611,
+   "lower": 280,
+   "upper": 941,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "H/E",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1531,6 +2951,32 @@
    "lower": 419,
    "upper": 1065,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 742,
+   "lower": 340,
+   "upper": 1144,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 823,
+   "lower": 378,
+   "upper": 1269,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1550,6 +2996,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "H/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 897,
+   "lower": 412,
+   "upper": 1382,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 977,
+   "lower": 448,
+   "upper": 1506,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "K/E",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1557,6 +3029,32 @@
    "lower": 679,
    "upper": 1729,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1204,
+   "lower": 552,
+   "upper": 1856,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1371,
+   "lower": 629,
+   "upper": 2112,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1576,6 +3074,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "K/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 2207,
+   "lower": 1013,
+   "upper": 3401,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 2125,
+   "lower": 975,
+   "upper": 3275,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "L",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1583,6 +3107,32 @@
    "lower": 871,
    "upper": 2215,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1543,
+   "lower": 708,
+   "upper": 2378,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1478,
+   "lower": 678,
+   "upper": 2278,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1602,6 +3152,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "M/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 899,
+   "lower": 412,
+   "upper": 1386,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/E",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 870,
+   "lower": 399,
+   "upper": 1340,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "M/W",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1609,6 +3185,32 @@
    "lower": 440,
    "upper": 1118,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 779,
+   "lower": 357,
+   "upper": 1201,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 782,
+   "lower": 359,
+   "upper": 1206,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1628,6 +3230,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 836,
+   "lower": 384,
+   "upper": 1288,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 942,
+   "lower": 432,
+   "upper": 1452,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "P/N",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1635,6 +3263,32 @@
    "lower": 844,
    "upper": 2146,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1495,
+   "lower": 686,
+   "upper": 2304,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1468,
+   "lower": 674,
+   "upper": 2262,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1654,6 +3308,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "P/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1623,
+   "lower": 745,
+   "upper": 2501,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1644,
+   "lower": 754,
+   "upper": 2534,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/C",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1661,6 +3341,32 @@
    "lower": 547,
    "upper": 1391,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 969,
+   "lower": 445,
+   "upper": 1493,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 981,
+   "lower": 450,
+   "upper": 1512,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1680,6 +3386,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "R/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 699,
+   "lower": 321,
+   "upper": 1077,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/N",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 641,
+   "lower": 294,
+   "upper": 987,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/S",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1687,6 +3419,32 @@
    "lower": 626,
    "upper": 1594,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 1110,
+   "lower": 509,
+   "upper": 1711,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 1011,
+   "lower": 464,
+   "upper": 1558,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1706,6 +3464,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 3036,
+   "lower": 1393,
+   "upper": 4679,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "S",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 2029,
+   "lower": 931,
+   "upper": 3128,
+   "method": "mean3",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "T",
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
@@ -1713,6 +3497,32 @@
    "lower": 229,
    "upper": 581,
    "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "T",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 405,
+   "lower": 186,
+   "upper": 624,
+   "method": "naive",
+   "family": "ward_swm"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "T",
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 351,
+   "lower": 161,
+   "upper": 541,
+   "method": "mean3",
    "family": "ward_swm"
   },
   {
@@ -1732,6 +3542,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "A",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 330,
+   "lower": 231,
+   "upper": 428,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "A",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 330,
+   "lower": 215,
+   "upper": 444,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "B",
    "category": "Drainage",
    "year": 2026,
@@ -1739,6 +3575,32 @@
    "lower": 287,
    "upper": 503,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 490,
+   "lower": 344,
+   "upper": 636,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "B",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 490,
+   "lower": 319,
+   "upper": 660,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1758,6 +3620,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "C",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 566,
+   "lower": 397,
+   "upper": 735,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "C",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 566,
+   "lower": 369,
+   "upper": 763,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "D",
    "category": "Drainage",
    "year": 2026,
@@ -1765,6 +3653,32 @@
    "lower": 509,
    "upper": 893,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 784,
+   "lower": 550,
+   "upper": 1018,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "D",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 784,
+   "lower": 511,
+   "upper": 1057,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1784,6 +3698,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "E",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 161,
+   "lower": 113,
+   "upper": 209,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "E",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 161,
+   "lower": 105,
+   "upper": 217,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "F/N",
    "category": "Drainage",
    "year": 2026,
@@ -1791,6 +3731,32 @@
    "lower": 334,
    "upper": 586,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 511,
+   "lower": 359,
+   "upper": 663,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/N",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 511,
+   "lower": 333,
+   "upper": 689,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1810,6 +3776,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "F/S",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 411,
+   "lower": 289,
+   "upper": 534,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "F/S",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 411,
+   "lower": 268,
+   "upper": 554,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "G/N",
    "category": "Drainage",
    "year": 2026,
@@ -1817,6 +3809,32 @@
    "lower": 580,
    "upper": 1016,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 771,
+   "lower": 541,
+   "upper": 1000,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/N",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 771,
+   "lower": 503,
+   "upper": 1039,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1836,6 +3854,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "G/S",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 551,
+   "lower": 387,
+   "upper": 715,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "G/S",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 551,
+   "lower": 359,
+   "upper": 743,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "H/E",
    "category": "Drainage",
    "year": 2026,
@@ -1843,6 +3887,32 @@
    "lower": 500,
    "upper": 876,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 761,
+   "lower": 535,
+   "upper": 988,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/E",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 761,
+   "lower": 497,
+   "upper": 1026,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1862,6 +3932,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "H/W",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 766,
+   "lower": 538,
+   "upper": 994,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "H/W",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 766,
+   "lower": 500,
+   "upper": 1032,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "K/E",
    "category": "Drainage",
    "year": 2026,
@@ -1869,6 +3965,32 @@
    "lower": 703,
    "upper": 1233,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 1217,
+   "lower": 855,
+   "upper": 1580,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/E",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 1217,
+   "lower": 794,
+   "upper": 1640,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1888,6 +4010,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "K/W",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 1404,
+   "lower": 986,
+   "upper": 1822,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "K/W",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 1404,
+   "lower": 916,
+   "upper": 1892,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "L",
    "category": "Drainage",
    "year": 2026,
@@ -1895,6 +4043,32 @@
    "lower": 658,
    "upper": 1154,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 942,
+   "lower": 662,
+   "upper": 1223,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "L",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 942,
+   "lower": 615,
+   "upper": 1270,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1914,6 +4088,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "M/E",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 802,
+   "lower": 563,
+   "upper": 1041,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/E",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 802,
+   "lower": 523,
+   "upper": 1081,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "M/W",
    "category": "Drainage",
    "year": 2026,
@@ -1921,6 +4121,32 @@
    "lower": 452,
    "upper": 794,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 639,
+   "lower": 448,
+   "upper": 829,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "M/W",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 639,
+   "lower": 417,
+   "upper": 861,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1940,6 +4166,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "N",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 809,
+   "lower": 568,
+   "upper": 1050,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "N",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 809,
+   "lower": 528,
+   "upper": 1091,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "P/N",
    "category": "Drainage",
    "year": 2026,
@@ -1947,6 +4199,32 @@
    "lower": 837,
    "upper": 1467,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 1064,
+   "lower": 747,
+   "upper": 1381,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/N",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 1064,
+   "lower": 694,
+   "upper": 1434,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1966,6 +4244,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "P/S",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 605,
+   "lower": 425,
+   "upper": 786,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "P/S",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 605,
+   "lower": 395,
+   "upper": 816,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/C",
    "category": "Drainage",
    "year": 2026,
@@ -1973,6 +4277,32 @@
    "lower": 408,
    "upper": 716,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 653,
+   "lower": 458,
+   "upper": 848,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/C",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 653,
+   "lower": 426,
+   "upper": 880,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -1992,6 +4322,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "R/N",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 375,
+   "lower": 263,
+   "upper": 486,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/N",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 375,
+   "lower": 244,
+   "upper": 505,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "R/S",
    "category": "Drainage",
    "year": 2026,
@@ -1999,6 +4355,32 @@
    "lower": 477,
    "upper": 837,
    "method": "naive",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 724,
+   "lower": 508,
+   "upper": 939,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "R/S",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 724,
+   "lower": 472,
+   "upper": 975,
+   "method": "mean3",
    "family": "ward_drainage"
   },
   {
@@ -2018,6 +4400,32 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "S",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 866,
+   "lower": 608,
+   "upper": 1124,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "S",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 866,
+   "lower": 565,
+   "upper": 1167,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": "T",
    "category": "Drainage",
    "year": 2026,
@@ -2031,12 +4439,64 @@
    "model": "complaints-forecast-2026",
    "metric": "complaints_registered",
    "month": null,
+   "zone": "T",
+   "category": "Drainage",
+   "year": 2027,
+   "value": 344,
+   "lower": 242,
+   "upper": 446,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": "T",
+   "category": "Drainage",
+   "year": 2028,
+   "value": 344,
+   "lower": 224,
+   "upper": 464,
+   "method": "mean3",
+   "family": "ward_drainage"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
    "zone": null,
    "category": "Buildings",
    "year": 2026,
    "value": 15226,
    "lower": 11314,
    "upper": 19138,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Buildings",
+   "year": 2027,
+   "value": 15226,
+   "lower": 10090,
+   "upper": 20361,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Buildings",
+   "year": 2028,
+   "value": 15226,
+   "lower": 9702,
+   "upper": 20749,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2058,11 +4518,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Colony Officer",
+   "year": 2027,
+   "value": 947,
+   "lower": 628,
+   "upper": 1266,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Colony Officer",
+   "year": 2028,
+   "value": 947,
+   "lower": 603,
+   "upper": 1291,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Drainage",
    "year": 2026,
    "value": 16956,
    "lower": 12600,
    "upper": 21312,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Drainage",
+   "year": 2027,
+   "value": 16956,
+   "lower": 11237,
+   "upper": 22675,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Drainage",
+   "year": 2028,
+   "value": 16956,
+   "lower": 10805,
+   "upper": 23107,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2084,11 +4596,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Estate",
+   "year": 2027,
+   "value": 866,
+   "lower": 574,
+   "upper": 1159,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Estate",
+   "year": 2028,
+   "value": 866,
+   "lower": 552,
+   "upper": 1181,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Garden",
    "year": 2026,
    "value": 3516,
    "lower": 2613,
    "upper": 4420,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Garden",
+   "year": 2027,
+   "value": 3516,
+   "lower": 2330,
+   "upper": 4702,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Garden",
+   "year": 2028,
+   "value": 3516,
+   "lower": 2241,
+   "upper": 4792,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2110,11 +4674,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "License",
+   "year": 2027,
+   "value": 14461,
+   "lower": 9583,
+   "upper": 19338,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "License",
+   "year": 2028,
+   "value": 14461,
+   "lower": 9215,
+   "upper": 19707,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "MCGM Related",
    "year": 2026,
    "value": 742,
    "lower": 551,
    "upper": 933,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "MCGM Related",
+   "year": 2027,
+   "value": 742,
+   "lower": 492,
+   "upper": 992,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "MCGM Related",
+   "year": 2028,
+   "value": 742,
+   "lower": 473,
+   "upper": 1011,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2136,11 +4752,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Medical Officer Health (MOH)",
+   "year": 2027,
+   "value": 1710,
+   "lower": 1133,
+   "upper": 2287,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Medical Officer Health (MOH)",
+   "year": 2028,
+   "value": 1710,
+   "lower": 1090,
+   "upper": 2331,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Miscellaneous issues in Civic",
    "year": 2026,
    "value": 2482,
    "lower": 1844,
    "upper": 3119,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Miscellaneous issues in Civic",
+   "year": 2027,
+   "value": 2482,
+   "lower": 1645,
+   "upper": 3319,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Miscellaneous issues in Civic",
+   "year": 2028,
+   "value": 2482,
+   "lower": 1581,
+   "upper": 3382,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2162,11 +4830,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Pest control",
+   "year": 2027,
+   "value": 9316,
+   "lower": 6174,
+   "upper": 12458,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Pest control",
+   "year": 2028,
+   "value": 9316,
+   "lower": 5936,
+   "upper": 12695,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Pollution",
    "year": 2026,
    "value": 912,
    "lower": 677,
    "upper": 1146,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Pollution",
+   "year": 2027,
+   "value": 912,
+   "lower": 604,
+   "upper": 1219,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Pollution",
+   "year": 2028,
+   "value": 912,
+   "lower": 581,
+   "upper": 1242,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2188,11 +4908,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Roads",
+   "year": 2027,
+   "value": 10567,
+   "lower": 7003,
+   "upper": 14131,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Roads",
+   "year": 2028,
+   "value": 10567,
+   "lower": 6733,
+   "upper": 14400,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "School",
    "year": 2026,
    "value": 73,
    "lower": 54,
    "upper": 92,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "School",
+   "year": 2027,
+   "value": 73,
+   "lower": 48,
+   "upper": 98,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "School",
+   "year": 2028,
+   "value": 73,
+   "lower": 47,
+   "upper": 99,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2214,11 +4986,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Shop and Establishment",
+   "year": 2027,
+   "value": 661,
+   "lower": 438,
+   "upper": 884,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Shop and Establishment",
+   "year": 2028,
+   "value": 661,
+   "lower": 421,
+   "upper": 901,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Solid Waste Management (SWM)",
    "year": 2026,
    "value": 25886,
    "lower": 19235,
    "upper": 32537,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Solid Waste Management (SWM)",
+   "year": 2027,
+   "value": 25886,
+   "lower": 17155,
+   "upper": 34617,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Solid Waste Management (SWM)",
+   "year": 2028,
+   "value": 25886,
+   "lower": 16495,
+   "upper": 35278,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2240,11 +5064,63 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Storm Water Drainage",
+   "year": 2027,
+   "value": 2539,
+   "lower": 1683,
+   "upper": 3395,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Storm Water Drainage",
+   "year": 2028,
+   "value": 2539,
+   "lower": 1618,
+   "upper": 3460,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": "Toilet",
    "year": 2026,
    "value": 576,
    "lower": 428,
    "upper": 724,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Toilet",
+   "year": 2027,
+   "value": 576,
+   "lower": 382,
+   "upper": 770,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Toilet",
+   "year": 2028,
+   "value": 576,
+   "lower": 367,
+   "upper": 785,
    "method": "mean3",
    "family": "city_issue"
   },
@@ -2266,12 +5142,64 @@
    "metric": "complaints_registered",
    "month": null,
    "zone": null,
+   "category": "Water Supply",
+   "year": 2027,
+   "value": 14484,
+   "lower": 9599,
+   "upper": 19369,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": "Water Supply",
+   "year": 2028,
+   "value": 14484,
+   "lower": 9229,
+   "upper": 19739,
+   "method": "mean3",
+   "family": "city_issue"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
    "category": null,
    "year": 2026,
    "value": 125270,
    "lower": 112504,
    "upper": 138037,
    "method": "trend",
+   "family": "city_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 128546,
+   "lower": 109582,
+   "upper": 147511,
+   "method": "trend",
+   "family": "city_total"
+  },
+  {
+   "model": "complaints-forecast-2026",
+   "metric": "complaints_registered",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 121919,
+   "lower": 101970,
+   "upper": 141869,
+   "method": "mean3",
    "family": "city_total"
   },
   {
@@ -2284,6 +5212,32 @@
    "value": 125,
    "lower": 119,
    "upper": 131,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2027,
+   "value": 125,
+   "lower": 116,
+   "upper": 134,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2028,
+   "value": 125,
+   "lower": 114,
+   "upper": 136,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2304,12 +5258,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2027,
+   "value": 73,
+   "lower": 68,
+   "upper": 78,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2028,
+   "value": 73,
+   "lower": 66,
+   "upper": 80,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "C",
    "category": null,
    "year": 2026,
    "value": 116,
    "lower": 110,
    "upper": 122,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2027,
+   "value": 116,
+   "lower": 108,
+   "upper": 124,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2028,
+   "value": 116,
+   "lower": 106,
+   "upper": 126,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2330,12 +5336,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2027,
+   "value": 104,
+   "lower": 96,
+   "upper": 112,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2028,
+   "value": 104,
+   "lower": 95,
+   "upper": 113,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "E",
    "category": null,
    "year": 2026,
    "value": 132,
    "lower": 125,
    "upper": 139,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2027,
+   "value": 132,
+   "lower": 122,
+   "upper": 142,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2028,
+   "value": 132,
+   "lower": 120,
+   "upper": 144,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2356,12 +5414,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2027,
+   "value": 167,
+   "lower": 155,
+   "upper": 179,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2028,
+   "value": 167,
+   "lower": 152,
+   "upper": 182,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "F/S",
    "category": null,
    "year": 2026,
    "value": 116,
    "lower": 110,
    "upper": 122,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2027,
+   "value": 116,
+   "lower": 108,
+   "upper": 124,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2028,
+   "value": 116,
+   "lower": 106,
+   "upper": 126,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2382,12 +5492,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2027,
+   "value": 266,
+   "lower": 247,
+   "upper": 285,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2028,
+   "value": 266,
+   "lower": 242,
+   "upper": 290,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "G/S",
    "category": null,
    "year": 2026,
    "value": 107,
    "lower": 101,
    "upper": 113,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2027,
+   "value": 107,
+   "lower": 99,
+   "upper": 115,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2028,
+   "value": 107,
+   "lower": 97,
+   "upper": 117,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2408,12 +5570,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2027,
+   "value": 174,
+   "lower": 161,
+   "upper": 187,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2028,
+   "value": 174,
+   "lower": 158,
+   "upper": 190,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "H/W",
    "category": null,
    "year": 2026,
    "value": 194,
    "lower": 184,
    "upper": 204,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2027,
+   "value": 194,
+   "lower": 180,
+   "upper": 208,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2028,
+   "value": 194,
+   "lower": 177,
+   "upper": 211,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2434,12 +5648,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2027,
+   "value": 318,
+   "lower": 295,
+   "upper": 341,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2028,
+   "value": 318,
+   "lower": 290,
+   "upper": 346,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "K/W",
    "category": null,
    "year": 2026,
    "value": 311,
    "lower": 295,
    "upper": 327,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2027,
+   "value": 311,
+   "lower": 288,
+   "upper": 334,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2028,
+   "value": 311,
+   "lower": 283,
+   "upper": 339,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2460,12 +5726,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2027,
+   "value": 368,
+   "lower": 341,
+   "upper": 395,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2028,
+   "value": 368,
+   "lower": 335,
+   "upper": 401,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "M/E",
    "category": null,
    "year": 2026,
    "value": 398,
    "lower": 378,
    "upper": 418,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2027,
+   "value": 398,
+   "lower": 369,
+   "upper": 427,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2028,
+   "value": 398,
+   "lower": 363,
+   "upper": 433,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2486,12 +5804,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2027,
+   "value": 235,
+   "lower": 218,
+   "upper": 252,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2028,
+   "value": 235,
+   "lower": 214,
+   "upper": 256,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "N",
    "category": null,
    "year": 2026,
    "value": 192,
    "lower": 182,
    "upper": 202,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2027,
+   "value": 192,
+   "lower": 178,
+   "upper": 206,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2028,
+   "value": 192,
+   "lower": 175,
+   "upper": 209,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2512,12 +5882,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2027,
+   "value": 304,
+   "lower": 282,
+   "upper": 326,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2028,
+   "value": 304,
+   "lower": 277,
+   "upper": 331,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "P/S",
    "category": null,
    "year": 2026,
    "value": 191,
    "lower": 181,
    "upper": 201,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2027,
+   "value": 191,
+   "lower": 177,
+   "upper": 205,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2028,
+   "value": 191,
+   "lower": 174,
+   "upper": 208,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2538,12 +5960,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2027,
+   "value": 170,
+   "lower": 158,
+   "upper": 182,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2028,
+   "value": 170,
+   "lower": 155,
+   "upper": 185,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "R/N",
    "category": null,
    "year": 2026,
    "value": 118,
    "lower": 112,
    "upper": 124,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2027,
+   "value": 118,
+   "lower": 109,
+   "upper": 127,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2028,
+   "value": 118,
+   "lower": 107,
+   "upper": 129,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2564,12 +6038,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2027,
+   "value": 162,
+   "lower": 150,
+   "upper": 174,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2028,
+   "value": 162,
+   "lower": 148,
+   "upper": 176,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": "S",
    "category": null,
    "year": 2026,
    "value": 277,
    "lower": 263,
    "upper": 291,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2027,
+   "value": 277,
+   "lower": 257,
+   "upper": 297,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2028,
+   "value": 277,
+   "lower": 252,
+   "upper": 302,
    "method": "naive",
    "family": "ward_waste"
   },
@@ -2590,12 +6116,64 @@
    "model": "waste-forecast-2026",
    "metric": "waste_tonnes_per_day",
    "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2027,
+   "value": 167,
+   "lower": 155,
+   "upper": 179,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2028,
+   "value": 167,
+   "lower": 152,
+   "upper": 182,
+   "method": "naive",
+   "family": "ward_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
    "zone": null,
    "category": null,
    "year": 2026,
    "value": 7174,
    "lower": 6808,
    "upper": 7540,
+   "method": "trend",
+   "family": "city_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 7393,
+   "lower": 6853,
+   "upper": 7933,
+   "method": "trend",
+   "family": "city_waste"
+  },
+  {
+   "model": "waste-forecast-2026",
+   "metric": "waste_tonnes_per_day",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 7612,
+   "lower": 6934,
+   "upper": 8289,
    "method": "trend",
    "family": "city_waste"
   },
@@ -2754,6 +6332,1722 @@
    "upper": 178,
    "method": "profile",
    "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 1,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 165,
+   "lower": 116,
+   "upper": 214,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 2,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 146,
+   "lower": 102,
+   "upper": 190,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 3,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 125,
+   "lower": 87,
+   "upper": 162,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 4,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 91,
+   "lower": 63,
+   "upper": 118,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 5,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 78,
+   "lower": 55,
+   "upper": 101,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 6,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 57,
+   "lower": 40,
+   "upper": 74,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 7,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 57,
+   "lower": 40,
+   "upper": 74,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 8,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 52,
+   "lower": 36,
+   "upper": 67,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 9,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 56,
+   "lower": 39,
+   "upper": 72,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 10,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 99,
+   "lower": 70,
+   "upper": 129,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 11,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 136,
+   "lower": 95,
+   "upper": 177,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 12,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 156,
+   "lower": 109,
+   "upper": 203,
+   "method": "climatology",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 1,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 145,
+   "lower": 102,
+   "upper": 189,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 2,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 142,
+   "lower": 100,
+   "upper": 185,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 3,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 115,
+   "lower": 81,
+   "upper": 150,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 4,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 92,
+   "lower": 64,
+   "upper": 119,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 5,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 72,
+   "lower": 51,
+   "upper": 94,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 6,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 58,
+   "lower": 40,
+   "upper": 75,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 7,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 53,
+   "lower": 37,
+   "upper": 69,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 8,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 46,
+   "lower": 32,
+   "upper": 60,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 9,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 49,
+   "lower": 34,
+   "upper": 64,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 10,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 105,
+   "lower": 74,
+   "upper": 136,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 11,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 133,
+   "lower": 93,
+   "upper": 173,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "aqi-forecast-2026",
+   "metric": "aqi_monthly_avg",
+   "month": 12,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 136,
+   "lower": 95,
+   "upper": 176,
+   "method": "smean3",
+   "family": "city_aqi"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2025,
+   "value": 1.61,
+   "lower": 0.97,
+   "upper": 2.25,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2026,
+   "value": 1.61,
+   "lower": 0.71,
+   "upper": 2.52,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2027,
+   "value": 1.61,
+   "lower": 0.51,
+   "upper": 2.72,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "A",
+   "category": null,
+   "year": 2028,
+   "value": 1.61,
+   "lower": 0.34,
+   "upper": 2.89,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2025,
+   "value": 3.49,
+   "lower": 2.85,
+   "upper": 4.13,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2026,
+   "value": 3.49,
+   "lower": 2.58,
+   "upper": 4.39,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2027,
+   "value": 3.49,
+   "lower": 2.38,
+   "upper": 4.59,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "B",
+   "category": null,
+   "year": 2028,
+   "value": 3.49,
+   "lower": 2.21,
+   "upper": 4.76,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2025,
+   "value": 0.25,
+   "lower": 0,
+   "upper": 0.89,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2026,
+   "value": 0.25,
+   "lower": 0,
+   "upper": 1.16,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2027,
+   "value": 0.25,
+   "lower": 0,
+   "upper": 1.36,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "C",
+   "category": null,
+   "year": 2028,
+   "value": 0.25,
+   "lower": 0,
+   "upper": 1.53,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2025,
+   "value": 0.75,
+   "lower": 0.11,
+   "upper": 1.39,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2026,
+   "value": 0.75,
+   "lower": 0,
+   "upper": 1.65,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2027,
+   "value": 0.75,
+   "lower": 0,
+   "upper": 1.85,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "D",
+   "category": null,
+   "year": 2028,
+   "value": 0.75,
+   "lower": 0,
+   "upper": 2.02,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2025,
+   "value": 0.6,
+   "lower": 0,
+   "upper": 1.24,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2026,
+   "value": 0.6,
+   "lower": 0,
+   "upper": 1.5,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2027,
+   "value": 0.6,
+   "lower": 0,
+   "upper": 1.7,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "E",
+   "category": null,
+   "year": 2028,
+   "value": 0.6,
+   "lower": 0,
+   "upper": 1.87,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2025,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 0.88,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2026,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.14,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2027,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.34,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/N",
+   "category": null,
+   "year": 2028,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.51,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2025,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 0.86,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2026,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.12,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2027,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.33,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "F/S",
+   "category": null,
+   "year": 2028,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.5,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2025,
+   "value": 0.62,
+   "lower": 0,
+   "upper": 1.26,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2026,
+   "value": 0.62,
+   "lower": 0,
+   "upper": 1.52,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2027,
+   "value": 0.62,
+   "lower": 0,
+   "upper": 1.73,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/N",
+   "category": null,
+   "year": 2028,
+   "value": 0.62,
+   "lower": 0,
+   "upper": 1.9,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2025,
+   "value": 0.76,
+   "lower": 0.12,
+   "upper": 1.4,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2026,
+   "value": 0.76,
+   "lower": 0,
+   "upper": 1.66,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2027,
+   "value": 0.76,
+   "lower": 0,
+   "upper": 1.86,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "G/S",
+   "category": null,
+   "year": 2028,
+   "value": 0.76,
+   "lower": 0,
+   "upper": 2.03,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2025,
+   "value": 1.6,
+   "lower": 0.96,
+   "upper": 2.24,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2026,
+   "value": 1.6,
+   "lower": 0.7,
+   "upper": 2.5,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2027,
+   "value": 1.6,
+   "lower": 0.49,
+   "upper": 2.71,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/E",
+   "category": null,
+   "year": 2028,
+   "value": 1.6,
+   "lower": 0.32,
+   "upper": 2.88,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2025,
+   "value": 0.29,
+   "lower": 0,
+   "upper": 0.93,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2026,
+   "value": 0.29,
+   "lower": 0,
+   "upper": 1.19,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2027,
+   "value": 0.29,
+   "lower": 0,
+   "upper": 1.39,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "H/W",
+   "category": null,
+   "year": 2028,
+   "value": 0.29,
+   "lower": 0,
+   "upper": 1.56,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2025,
+   "value": 0.17,
+   "lower": 0,
+   "upper": 0.81,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2026,
+   "value": 0.17,
+   "lower": 0,
+   "upper": 1.08,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2027,
+   "value": 0.17,
+   "lower": 0,
+   "upper": 1.28,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/E",
+   "category": null,
+   "year": 2028,
+   "value": 0.17,
+   "lower": 0,
+   "upper": 1.45,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2025,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 0.86,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2026,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.12,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2027,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.33,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "K/W",
+   "category": null,
+   "year": 2028,
+   "value": 0.22,
+   "lower": 0,
+   "upper": 1.5,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2025,
+   "value": 0.55,
+   "lower": 0,
+   "upper": 1.19,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2026,
+   "value": 0.55,
+   "lower": 0,
+   "upper": 1.45,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2027,
+   "value": 0.55,
+   "lower": 0,
+   "upper": 1.66,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "L",
+   "category": null,
+   "year": 2028,
+   "value": 0.55,
+   "lower": 0,
+   "upper": 1.83,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2025,
+   "value": 0.49,
+   "lower": 0,
+   "upper": 1.13,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2026,
+   "value": 0.49,
+   "lower": 0,
+   "upper": 1.39,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2027,
+   "value": 0.49,
+   "lower": 0,
+   "upper": 1.59,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/E",
+   "category": null,
+   "year": 2028,
+   "value": 0.49,
+   "lower": 0,
+   "upper": 1.76,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2025,
+   "value": 0.41,
+   "lower": 0,
+   "upper": 1.05,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2026,
+   "value": 0.41,
+   "lower": 0,
+   "upper": 1.31,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2027,
+   "value": 0.41,
+   "lower": 0,
+   "upper": 1.51,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "M/W",
+   "category": null,
+   "year": 2028,
+   "value": 0.41,
+   "lower": 0,
+   "upper": 1.68,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2025,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 0.99,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2026,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.25,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2027,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.46,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "N",
+   "category": null,
+   "year": 2028,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.63,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2025,
+   "value": 0.09,
+   "lower": 0,
+   "upper": 0.73,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2026,
+   "value": 0.09,
+   "lower": 0,
+   "upper": 0.99,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2027,
+   "value": 0.09,
+   "lower": 0,
+   "upper": 1.19,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/N",
+   "category": null,
+   "year": 2028,
+   "value": 0.09,
+   "lower": 0,
+   "upper": 1.36,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2025,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 0.88,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2026,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.14,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2027,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.34,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "P/S",
+   "category": null,
+   "year": 2028,
+   "value": 0.24,
+   "lower": 0,
+   "upper": 1.51,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2025,
+   "value": 0.98,
+   "lower": 0.34,
+   "upper": 1.62,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2026,
+   "value": 0.98,
+   "lower": 0.08,
+   "upper": 1.89,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2027,
+   "value": 0.98,
+   "lower": 0,
+   "upper": 2.09,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/C",
+   "category": null,
+   "year": 2028,
+   "value": 0.98,
+   "lower": 0,
+   "upper": 2.26,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2025,
+   "value": 0.16,
+   "lower": 0,
+   "upper": 0.8,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2026,
+   "value": 0.16,
+   "lower": 0,
+   "upper": 1.06,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2027,
+   "value": 0.16,
+   "lower": 0,
+   "upper": 1.26,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/N",
+   "category": null,
+   "year": 2028,
+   "value": 0.16,
+   "lower": 0,
+   "upper": 1.43,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2025,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 0.99,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2026,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.25,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2027,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.45,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "R/S",
+   "category": null,
+   "year": 2028,
+   "value": 0.35,
+   "lower": 0,
+   "upper": 1.62,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2025,
+   "value": 0.1,
+   "lower": 0,
+   "upper": 0.74,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2026,
+   "value": 0.1,
+   "lower": 0,
+   "upper": 1.0,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2027,
+   "value": 0.1,
+   "lower": 0,
+   "upper": 1.2,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "S",
+   "category": null,
+   "year": 2028,
+   "value": 0.1,
+   "lower": 0,
+   "upper": 1.37,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2025,
+   "value": 0.66,
+   "lower": 0.02,
+   "upper": 1.3,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2026,
+   "value": 0.66,
+   "lower": 0,
+   "upper": 1.57,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2027,
+   "value": 0.66,
+   "lower": 0,
+   "upper": 1.77,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": "T",
+   "category": null,
+   "year": 2028,
+   "value": 0.66,
+   "lower": 0,
+   "upper": 1.94,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2025,
+   "value": 0.51,
+   "lower": 0,
+   "upper": 1.15,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2026,
+   "value": 0.51,
+   "lower": 0,
+   "upper": 1.42,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 0.51,
+   "lower": 0,
+   "upper": 1.62,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_unfit_samples_pct",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 0.51,
+   "lower": 0,
+   "upper": 1.79,
+   "method": "mean3",
+   "family": "unfit"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_yield_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2025,
+   "value": 4435,
+   "lower": 4353,
+   "upper": 4516,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_yield_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2026,
+   "value": 4435,
+   "lower": 4319,
+   "upper": 4550,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_yield_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 4435,
+   "lower": 4293,
+   "upper": 4576,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_yield_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 4435,
+   "lower": 4271,
+   "upper": 4598,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_supply_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2025,
+   "value": 3948,
+   "lower": 3875,
+   "upper": 4020,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_supply_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2026,
+   "value": 3948,
+   "lower": 3845,
+   "upper": 4051,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_supply_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2027,
+   "value": 3948,
+   "lower": 3822,
+   "upper": 4074,
+   "method": "mean3",
+   "family": "city_water_fy"
+  },
+  {
+   "model": "water-forecast",
+   "metric": "water_supply_fy",
+   "month": null,
+   "zone": null,
+   "category": null,
+   "year": 2028,
+   "value": 3948,
+   "lower": 3802,
+   "upper": 4093,
+   "method": "mean3",
+   "family": "city_water_fy"
   }
  ]
 }

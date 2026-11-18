@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Button, Card, ErrorNote, Field } from "@/components/ui";
 import { ApiKeyForm } from "@/components/api-key-form";
 import { when } from "@/lib/complaints";
-import { addTeamMember, changePlan, revokeApiKey } from "./actions";
+import { addTeamMember, changePlan, inviteMember, revokeApiKey, revokeInvitation, setMemberDepartment } from "./actions";
 import { requireSession } from "@/lib/auth";
 import { canAccess, ROLE_LABEL, type Role } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -17,11 +17,20 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   if (!canAccess(session.role, "/settings")) redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: org }, { data: members }, { data: departments }] = await Promise.all([
+  const [{ data: org }, { data: members }, { data: departments }, { data: invites }] = await Promise.all([
     supabase.from("organizations").select("name, slug, status, plan_code, created_at, plans(name, limits)").eq("id", session.orgId).maybeSingle(),
-    supabase.from("users").select("id, full_name, email, role, is_active").order("created_at"),
+    supabase.from("users").select("id, full_name, email, role, is_active, department_id").order("created_at"),
     supabase.from("departments").select("id, name, code").order("name"),
+    supabase.from("invitations").select("id, email, role, department_id, expires_at, created_at").is("accepted_at", null).order("created_at", { ascending: false }),
   ]);
+  const deptName = new Map((departments ?? []).map((d) => [d.id as string, d.name as string]));
+  const selectCls = "w-full rounded-lg border border-line bg-raised px-3 py-2.5 text-sm text-ink focus:border-accent focus:outline-none";
+  const deptOptions = (
+    <>
+      <option value="">No department (sees all)</option>
+      {(departments ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+    </>
+  );
 
   const embeddedPlan = (Array.isArray(org?.plans) ? org?.plans[0] : org?.plans) as { name: string; limits: Record<string, unknown> } | null | undefined;
 
@@ -131,14 +140,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         </p>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden" id="team">
         <h2 className="px-5 pt-5 text-sm font-medium">Members ({members?.length ?? 0})</h2>
+        <p className="px-5 text-xs text-muted">A Department Officer with a department sees and acts on that department&apos;s complaints and tasks only.</p>
         <table className="mt-3 w-full text-left text-sm">
           <thead className="border-y border-line text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-5 py-2 font-medium">Name</th>
               <th className="px-5 py-2 font-medium">Email</th>
               <th className="px-5 py-2 font-medium">Role</th>
+              <th className="px-5 py-2 font-medium">Department</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -147,6 +158,17 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 <td className="px-5 py-3">{m.full_name}</td>
                 <td className="px-5 py-3 text-muted">{m.email}</td>
                 <td className="px-5 py-3">{ROLE_LABEL[m.role as Role] ?? m.role}</td>
+                <td className="px-5 py-3">
+                  {m.role === "citizen" ? <span className="text-faint">—</span> : (
+                    <form action={setMemberDepartment} className="flex items-center gap-2">
+                      <input type="hidden" name="id" value={m.id} />
+                      <select name="department" defaultValue={m.department_id ?? ""} className="rounded border border-line bg-raised px-2 py-1 text-xs text-ink">
+                        {deptOptions}
+                      </select>
+                      <button type="submit" className="text-xs text-muted hover:text-ink">Save</button>
+                    </form>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -154,15 +176,59 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-sm font-medium">Add a team member</h2>
+        <h2 className="text-sm font-medium">Invite by email</h2>
+        <p className="mt-1 text-xs text-muted">
+          The person receives an email, sets their own name and password, and joins with the role and department you choose. Pending invitations count towards the plan&apos;s staff limit.
+        </p>
+        <div className="mt-3 space-y-2">
+          <ErrorNote message={typeof sp.error === "string" ? sp.error : undefined} />
+          {typeof sp.added === "string" ? (
+            <div role="status" className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink">
+              {sp.added}
+              {typeof sp.link === "string" ? <code className="mt-1 block break-all rounded bg-raised px-2 py-1 text-xs">{sp.link}</code> : null}
+            </div>
+          ) : null}
+        </div>
+        <form action={inviteMember} className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Field label="Email" name="email" type="email" required />
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-ink">Role</span>
+            <select name="role" defaultValue="field_worker" className={selectCls}>
+              <option value="dept_officer">Department Officer</option>
+              <option value="field_worker">Field Worker</option>
+              <option value="city_admin">City Administrator</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-ink">Department</span>
+            <select name="department" defaultValue="" className={selectCls}>{deptOptions}</select>
+          </label>
+          <div className="sm:col-span-3"><Button type="submit">Send invitation</Button></div>
+        </form>
+        {invites?.length ? (
+          <div className="mt-5">
+            <p className="text-xs font-medium text-muted">Pending invitations</p>
+            <ul className="mt-2 divide-y divide-line text-sm">
+              {invites.map((i) => (
+                <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span>{i.email} <span className="text-xs text-muted">· {ROLE_LABEL[i.role as Role] ?? i.role}{i.department_id ? ` · ${deptName.get(i.department_id) ?? ""}` : ""} · expires {when(i.expires_at)}</span></span>
+                  <form action={revokeInvitation}>
+                    <input type="hidden" name="id" value={i.id} />
+                    <button type="submit" className="text-xs text-muted hover:text-danger">Revoke</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-sm font-medium">Or add a team member with a temporary password</h2>
         <p className="mt-1 text-xs text-muted">
           Creates a staff account in this organization. Share the temporary password with them yourself. Staff accounts count towards the plan&apos;s user limit; residents who sign up to report problems do not.
         </p>
         <form action={addTeamMember} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2 space-y-2">
-            <ErrorNote message={typeof sp.error === "string" ? sp.error : undefined} />
-            {typeof sp.added === "string" ? <p role="status" className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-ink">{sp.added}</p> : null}
-          </div>
           <Field label="Name" name="full_name" required />
           <Field label="Email" name="email" type="email" required />
           <Field label="Temporary password" name="password" type="text" minLength={8} required autoComplete="off" />
@@ -172,6 +238,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               <option value="dept_officer">Department Officer: reviews, assigns and verifies complaints</option>
               <option value="field_worker">Field Worker: works on complaints assigned to them</option>
             </select>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-ink">Department</span>
+            <select name="department" defaultValue="" className={selectCls}>{deptOptions}</select>
           </label>
           <div className="sm:col-span-2"><Button type="submit">Add team member</Button></div>
         </form>

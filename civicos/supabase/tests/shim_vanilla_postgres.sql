@@ -30,3 +30,13 @@ create function public.st_multi(text) returns text language sql immutable as $$ 
 create function public.st_setsrid(text, int) returns text language sql immutable as $$ select $1 $$;
 create function public.st_makepoint(float8, float8) returns text language sql immutable as
 $$ select format('{"type":"Point","coordinates":[%s,%s]}', $1, $2) $$;
+-- the type name only, so plpgsql functions that declare geography variables compile; they are not run in shim mode
+create domain public.geography as text;
+
+-- pgvector stand-in: run_rls_test.sh rewrites vector(n) to float8[] and drops HNSW indexes;
+-- <=> is cosine distance, as in pgvector. Slow, but exact, which is all the test needs.
+create function public.shim_cosine_distance(float8[], float8[]) returns float8 language sql immutable as $$
+  select 1 - (select sum(a * b) from unnest($1, $2) t(a, b))
+           / nullif(sqrt((select sum(a * a) from unnest($1) a)) * sqrt((select sum(b * b) from unnest($2) b)), 0)
+$$;
+create operator public.<=> (leftarg = float8[], rightarg = float8[], function = public.shim_cosine_distance);

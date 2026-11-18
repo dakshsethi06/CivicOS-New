@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3, Bot, Building, Droplets, LayoutDashboard, Lightbulb, Map, MessageSquareWarning, Settings, TrafficCone, Trash2,
+  BarChart3, Bot, Building, ClipboardList, Droplets, LayoutDashboard, Lightbulb, Map, MessageSquareWarning, Settings, TrafficCone, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { CURRENT_PHASE, type NavItem } from "@/lib/permissions";
@@ -15,6 +15,7 @@ const ICONS: Record<NavItem["icon"], LucideIcon> = {
   waste: Trash2,
   traffic: TrafficCone,
   complaints: MessageSquareWarning,
+  tasks: ClipboardList,
   assistant: Bot,
   insights: Lightbulb,
   analytics: BarChart3,

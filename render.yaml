@@ -1,0 +1,56 @@
+# Render Blueprint for the CivicOS API (civicos/apps/api). In Render: New -> Blueprint -> pick this repository.
+# The web app stays on Vercel and the database on Supabase; set CIVICOS_API_URL in Vercel to this service's URL.
+services:
+  - type: web
+    name: civicos-api
+    runtime: docker
+    dockerfilePath: ./civicos/apps/api/Dockerfile
+    dockerContext: ./civicos/apps/api
+    plan: free                 # free instances sleep after inactivity; the first question after a pause is slow
+    region: singapore          # nearest Render region to Mumbai; keep it close to your Supabase region
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - civicos/apps/api/**
+    envVars:
+      - key: DATABASE_URL      # Supabase pooler connection string (Render has no IPv6, so not the direct one)
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      # Separate vector database (optional): Qdrant Cloud. Leave VECTOR_STORE as pgvector to search inside Supabase.
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      # Without REDIS_URL the API trains the water, waste and traffic models in its own process (about a minute).
+      # A free instance has 512 MB of memory, which is enough for the demonstration dataset.
+
+# Optional, paid: a Celery worker and nightly retraining. Uncomment, add REDIS_URL to the web service above
+# (fromService: civicos-redis), and redeploy.
+#  - type: worker
+#    name: civicos-worker
+#    runtime: docker
+#    dockerfilePath: ./civicos/apps/api/Dockerfile
+#    dockerContext: ./civicos/apps/api
+#    dockerCommand: celery -A app.worker worker --beat --loglevel=info --concurrency=1 --schedule /tmp/celerybeat-schedule
+#    plan: starter
+#    region: singapore
+#    envVars:                 # plus the same DATABASE_URL, SUPABASE_URL and SUPABASE_ANON_KEY as the API
+#      - key: REDIS_URL
+#        fromService: { type: keyvalue, name: civicos-redis, property: connectionString }
+#  - type: keyvalue
+#    name: civicos-redis
+#    plan: free
+#    region: singapore
+#    ipAllowList: []

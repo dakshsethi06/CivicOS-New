@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { ApiError, apiConfigured, callApi } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { buildSources, extractiveAnswer, NOT_ESTABLISHED, SYSTEM_PROMPT, validateAnswer, type ChunkHit, type Citation, type Fact, type Mode } from "@/lib/assistant";
 import { extractChunks } from "@/lib/extract";
@@ -9,16 +10,31 @@ import { createClient } from "@/lib/supabase/server";
 
 type Retrieved = { allowed: boolean; limit: number | null; used: number; facts?: Fact[]; chunks?: ChunkHit[] };
 
-/** Retrieve, answer only from what was retrieved, check the citations, save. */
+/**
+ * With the CivicOS API: semantic + keyword retrieval over the documents, routed tool calls for figures, wards and live
+ * complaints, an answer written by Gemini from those sources only, citations checked, saved.
+ * Without it: the built-in keyword retrieval below.
+ */
 export async function ask(formData: FormData) {
   await requireSession();
-  const supabase = await createClient();
   const question = String(formData.get("question") ?? "").trim().slice(0, 600);
   const conversation = String(formData.get("conversation") ?? "") || null;
   const back = (c: string | null, error?: string) =>
     redirect(`/assistant${c ? `?c=${c}` : ""}${error ? `${c ? "&" : "?"}error=${encodeURIComponent(error)}` : ""}`);
   if (question.length < 3) back(conversation, "Ask a question.");
 
+  if (apiConfigured()) {
+    let conv: string | null = null;
+    try {
+      const r = await callApi<{ conversation_id: string }>("/v1/assistant/ask", { question, conversation_id: conversation });
+      conv = r.conversation_id;
+    } catch (e) {
+      back(conversation, e instanceof ApiError ? e.message : "The assistant failed. Try again.");
+    }
+    redirect(`/assistant?c=${conv}`);
+  }
+
+  const supabase = await createClient();
   const { data, error } = await supabase.rpc("assistant_retrieve", { p_question: question });
   if (error || !data) back(conversation, error?.message ?? "Retrieval failed.");
   const r = data as Retrieved;
@@ -94,6 +110,19 @@ export async function ingestDocument(input: IngestInput): Promise<{ ok: boolean;
     return { ok: false, message: error?.message ?? "Could not register the document." };
   }
 
+  if (apiConfigured()) {
+    // the API reads the file back, cleans and chunks it, embeds every chunk and stores the vectors
+    try {
+      const r = await callApi<{ pages: number; chunks: number; embedded: boolean; warning: string | null }>(`/v1/documents/${id}/ingest`, undefined, 280_000);
+      return {
+        ok: true,
+        message: `Added ${r.pages} page${r.pages === 1 ? "" : "s"} as ${r.chunks} passages${r.embedded ? ", indexed for semantic search" : ""}.${r.warning ? ` ${r.warning}` : ""}`,
+      };
+    } catch (e) {
+      return { ok: false, message: e instanceof ApiError ? e.message : "Processing failed." };
+    }
+  }
+
   try {
     const file = await supabase.storage.from("documents").download(input.path);
     if (file.error || !file.data) throw new Error(file.error?.message ?? "Could not read the uploaded file.");
@@ -109,6 +138,20 @@ export async function ingestDocument(input: IngestInput): Promise<{ ok: boolean;
   }
 }
 
+/** Embeds every passage that has no vector yet, e.g. documents added before semantic search was switched on. */
+export async function reindexDocuments() {
+  const session = await requireSession();
+  if (session.role !== "city_admin" && session.role !== "dept_officer") redirect("/assistant");
+  let message: string;
+  try {
+    const r = await callApi<{ embedded: number }>("/v1/documents/reindex", undefined, 280_000);
+    message = r.embedded ? `Indexed ${r.embedded} passages for semantic search.` : "Every passage is already indexed.";
+  } catch (e) {
+    message = e instanceof ApiError ? e.message : "Re-indexing failed.";
+  }
+  redirect(`/assistant/documents?note=${encodeURIComponent(message)}`);
+}
+
 export async function deleteDocument(formData: FormData) {
   await requireSession();
   const supabase = await createClient();
@@ -116,5 +159,8 @@ export async function deleteDocument(formData: FormData) {
   const { data } = await supabase.from("documents").select("storage_path").eq("id", id).maybeSingle();
   await supabase.from("documents").delete().eq("id", id);
   if (data?.storage_path) await supabase.storage.from("documents").remove([data.storage_path]);
+  // with a separate vector database, remove the document's vectors too (its passages are already unreachable:
+  // every vector hit is re-read through Postgres, where the document is gone)
+  if (apiConfigured()) await callApi(`/v1/documents/${id}/forget`, undefined, 20_000).catch(() => undefined);
   redirect("/assistant/documents");
 }

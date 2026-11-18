@@ -18,7 +18,7 @@ type Rec = {
 };
 const STATUS = ["open", "accepted", "assigned", "completed", "rejected"];
 const LABEL: Record<string, string> = { open: "Open", accepted: "Accepted", assigned: "Assigned", completed: "Completed", rejected: "Rejected" };
-const MODULE: Record<string, string> = { complaints: "Complaints", water: "Water", waste: "Waste", environment: "Air quality" };
+const MODULE: Record<string, string> = { complaints: "Complaints", water: "Water", waste: "Waste", environment: "Air quality", traffic: "Traffic" };
 const btn = "rounded-lg border border-line px-3 py-1.5 text-xs text-ink hover:bg-raised";
 const inputCls = "h-8 rounded-lg border border-line bg-raised px-2 text-xs text-ink focus:border-accent focus:outline-none";
 

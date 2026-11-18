@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { ApiError, apiConfigured, callApi } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,7 +43,36 @@ export async function submitComplaint(formData: FormData) {
     p_photo_path: photoPath,
   });
   if (error || !data) back(error?.message ?? "The complaint could not be submitted.");
-  redirect(`/complaints/${(data as { id: string }).id}?created=1${photoNote}`);
+  const id = (data as { id: string }).id;
+
+  // AI suggestions (category by meaning, duplicates, photo check). The report is already saved, so a failure here
+  // only means the officer sees the rule-based suggestions alone.
+  let aiNote = "";
+  if (apiConfigured()) {
+    try {
+      await callApi(`/v1/complaints/${id}/analyse`, undefined, 45_000);
+    } catch {
+      aiNote = "&ai=failed";
+    }
+  }
+  redirect(`/complaints/${id}?created=1${photoNote}${aiNote}`);
+}
+
+/** Officers re-run the AI analysis (for example after the photo or text changed, or if it failed on submission). */
+export async function analyseComplaint(formData: FormData) {
+  const session = await requireSession();
+  const id = text(formData, "id");
+  let q = "";
+  if (session.role !== "city_admin" && session.role !== "dept_officer") q = "?error=" + encodeURIComponent("Only officers can re-run the analysis.");
+  else if (!apiConfigured()) q = "?error=" + encodeURIComponent("The CivicOS API is not configured (CIVICOS_API_URL).");
+  else {
+    try {
+      await callApi(`/v1/complaints/${id}/analyse`, undefined, 60_000);
+    } catch (e) {
+      q = "?error=" + encodeURIComponent(e instanceof ApiError ? e.message : "The analysis failed.");
+    }
+  }
+  redirect(`/complaints/${id}${q}`);
 }
 
 /** Runs one workflow step. The database checks the role and the complaint's state. */

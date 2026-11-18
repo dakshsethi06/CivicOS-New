@@ -1,0 +1,46 @@
+# Local development of the API against your Supabase project: docker compose up --build
+# Then set CIVICOS_API_URL=http://localhost:8000 in apps/web/.env.local and run the web app as usual.
+#
+# With the "jobs" profile (docker compose --profile jobs up --build) a Redis queue, a Celery worker and the nightly
+# scheduler run too, and the API hands model training to the worker. Without it, the API trains in its own process.
+services:
+  api:
+    build: ./apps/api
+    env_file: ./apps/api/.env
+    ports:
+      - "8000:8000"
+
+  # A separate vector database for document search: docker compose --profile vector up, then set VECTOR_STORE=qdrant
+  # and QDRANT_URL=http://qdrant:6333 in apps/api/.env
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    profiles: [vector]
+
+  redis:
+    image: redis:7.4-alpine
+    profiles: [jobs]
+
+  worker:
+    build: ./apps/api
+    env_file: ./apps/api/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A app.worker worker --loglevel=info --concurrency=1
+    depends_on: [redis]
+    profiles: [jobs]
+
+  beat:
+    build: ./apps/api
+    env_file: ./apps/api/.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A app.worker beat --loglevel=info --schedule /tmp/celerybeat-schedule
+    depends_on: [redis]
+    profiles: [jobs]
+
+volumes:
+  qdrant-data:

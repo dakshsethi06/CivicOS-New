@@ -11,7 +11,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export type NavItem = {
   href: string;
   label: string;
-  icon: "dashboard" | "map" | "water" | "waste" | "traffic" | "complaints" | "assistant" | "insights" | "analytics" | "settings" | "platform";
+  icon: "dashboard" | "map" | "water" | "waste" | "traffic" | "complaints" | "tasks" | "assistant" | "insights" | "analytics" | "settings" | "platform";
   roles: Role[];
   /** Build phase that delivers this page. Items above the current phase render disabled. */
   phase: number;
@@ -26,8 +26,9 @@ export const NAV: NavItem[] = [
   { href: "/map", label: "City Map", icon: "map", roles: [...STAFF, "field_worker"], phase: 1 },
   { href: "/water", label: "Water", icon: "water", roles: STAFF, phase: 1 },
   { href: "/complaints", label: "Complaints", icon: "complaints", roles: [...STAFF, "field_worker", "citizen"], phase: 1 },
+  { href: "/tasks", label: "Tasks", icon: "tasks", roles: [...STAFF, "field_worker"], phase: 1 },
   { href: "/waste", label: "Waste", icon: "waste", roles: STAFF, phase: 1 },
-  { href: "/traffic", label: "Traffic", icon: "traffic", roles: STAFF, phase: 99, disabledNote: "No published data" },
+  { href: "/traffic", label: "Traffic", icon: "traffic", roles: STAFF, phase: 1 },
   { href: "/assistant", label: "Assistant", icon: "assistant", roles: [...STAFF, "field_worker", "citizen"], phase: 1 },
   { href: "/insights", label: "Insights", icon: "insights", roles: STAFF, phase: 1 },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: STAFF, phase: 1 },
