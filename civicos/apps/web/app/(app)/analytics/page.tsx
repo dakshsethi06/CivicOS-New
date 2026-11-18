@@ -14,7 +14,7 @@ import { requireSession } from "@/lib/auth";
 import { GROUP_COLORS } from "@/lib/chart-colors";
 import { fmt } from "@/lib/dashboard";
 import { parseFilters } from "@/lib/filters";
-import { methodsByYear, type ForecastExtras, type MlData, type WardForecast, type YearRange } from "@/lib/models";
+import { methodsByYear, type ForecastExtras, type MlData, type MoreForecasts, type WardForecast, type YearRange } from "@/lib/models";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Analytics" };
@@ -98,12 +98,14 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
   const filters = parseFilters(await searchParams);
   const supabase = await createClient();
 
-  const [{ data, error }, zones, dash, extrasRes] = await Promise.all([
+  const [{ data, error }, zones, dash, extrasRes, moreRes] = await Promise.all([
     supabase.rpc("ml_data", { p_zone: filters.zone, p_issue: filters.issue }),
     supabase.from("city_zones").select("id, name").order("code"),
     supabase.rpc("dashboard_data", { p_year: null, p_zone: null, p_issue: null }),
     supabase.rpc("forecast_extras", { p_zone: filters.zone }),
+    supabase.rpc("forecast_more", { p_zone: filters.zone }),     // migration 0023; null before it runs
   ]);
+  const more = moreRes.data as MoreForecasts | null;
   const ex = extrasRes.data as ForecastExtras | null;
   const dd = dash.data as DashboardData | null;
   const d = data as MlData | null;
@@ -112,7 +114,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Ward patterns and forecasts</h1>
-        <p className="mt-1 text-sm text-muted">Models trained on the published figures: ward groups and three-year forecasts of complaints, air quality and waste, each tested on past years.</p>
+        <p className="mt-1 text-sm text-muted">Models trained on the published figures: ward groups and three-year forecasts of complaints, how fast they are closed, air quality and waste, each tested on past years.</p>
       </div>
       <PrintButton />
     </div>
@@ -236,6 +238,8 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
           <p className="py-10 text-center text-sm text-faint">No published series for this ward and issue.</p>
         )}
       </ChartCard>
+
+      {more?.closure?.model && more.closure.days.forecasts.length ? <ClosureForecasts more={more} scope={scope} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
@@ -501,5 +505,74 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
         </ul>
       </section>
     </div>
+  );
+}
+
+/** Complaint closure: days to close and share closed, 2026-2028, from the three published years. */
+function ClosureForecasts({ more, scope }: { more: MoreForecasts; scope: string }) {
+  const c = more.closure;
+  const fams = c.model!.params.families;
+  const dFam = fams.days_to_close, pFam = fams.closed_pct;
+  const dErr = dFam.mape_pct?.[dFam.chosen], dNaive = dFam.mape_pct?.naive;
+  const pErr = pFam.mae?.[pFam.chosen], pNaive = pFam.mae?.naive;
+  const method = (k: string) => c.model!.params.methods[k]?.toLowerCase() ?? k;
+  const years = c.days.forecasts.map((f) => f.year);
+  const caution = `Only three years are published (${c.days.history.map((h) => h.year).join(", ")}), so the methods were tested on one year only (2025, forecast from 2023 and 2024, across ${dFam.series} series) and the ranges for later years are widened from that test. Treat these as rough.`;
+  return (
+    <>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard
+          title={`Average days to close a complaint, forecast for ${years[0]} to ${years.at(-1)}: ${scope}`}
+          question="Will complaints be resolved faster or slower?"
+          note={`Method: ${method(dFam.chosen)}. Its forecasts for 2025 missed by ${dErr?.toFixed(0)}% on average, against ${dNaive?.toFixed(0)}% for repeating last year. ${caution}`}
+          source={`Trained on ${c.model!.trained_on}.`}
+          table={{ columns: ["Year", "Days to close"], rows: [...c.days.history.map((h) => [h.year, h.value] as (string | number)[]),
+                   ...c.days.forecasts.map((f) => [`${f.year} (forecast)`, `${fmt.int(f.value)} (${fmt.int(f.lower)} to ${fmt.int(f.upper)})`])] }}
+        >
+          <ForecastChart history={c.days.history} forecasts={c.days.forecasts} unit="days" />
+        </ChartCard>
+        <ChartCard
+          title={`Share of complaints closed, %, forecast for ${years[0]} to ${years.at(-1)}: ${scope}`}
+          question="What share of complaints will be closed?"
+          note={`Closed as a share of complaints registered that year. Method: ${method(pFam.chosen)}. Its forecasts for 2025 missed by ${pErr?.toFixed(1)} percentage points on average, against ${pNaive?.toFixed(1)} for repeating last year. Upper ends are capped at 100%. ${caution}`}
+          source={`Trained on ${c.model!.trained_on}.`}
+          table={{ columns: ["Year", "% closed"], rows: [...c.pct.history.map((h) => [h.year, h.value] as (string | number)[]),
+                   ...c.pct.forecasts.map((f) => [`${f.year} (forecast)`, `${fmt.one(f.value)} (${fmt.one(f.lower)} to ${fmt.one(f.upper)})`])] }}
+        >
+          <ForecastChart history={c.pct.history} forecasts={c.pct.forecasts} decimals={1} unit="%" />
+        </ChartCard>
+      </div>
+      {c.wards.length ? (
+        <ChartCard
+          title={`Days to close a complaint by ward: latest published and forecast ${years[0]} to ${years.at(-1)}`}
+          question="Which wards are expected to stay slow?"
+          note="Each ward's forecast with its 80% range in brackets. Sorted by the next year's forecast, slowest first."
+          table={{ columns: ["Ward", "Latest published", ...years.map((y) => `${y} forecast`)],
+                   rows: c.wards.map((w) => [w.code, w.days_last, ...years.map((y) => w.days?.find((f) => f.year === y)?.value ?? null)]) }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm tabular-nums">
+              <thead className="text-xs uppercase tracking-wide text-muted">
+                <tr><th className="py-1.5 pr-4 font-medium">Ward</th><th className="py-1.5 pr-4 font-medium">Latest</th>
+                  {years.map((y) => <th key={y} className="py-1.5 pr-4 font-medium">{y}</th>)}<th className="py-1.5 font-medium">% closed, {years[0]}</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {[...c.wards].sort((a, b) => (b.days?.[0]?.value ?? 0) - (a.days?.[0]?.value ?? 0)).map((w) => (
+                  <tr key={w.code}>
+                    <td className="py-1.5 pr-4 text-ink">{w.code}</td>
+                    <td className="py-1.5 pr-4 text-muted">{fmt.int(w.days_last)}</td>
+                    {years.map((y) => {
+                      const f = w.days?.find((x) => x.year === y);
+                      return <td key={y} className="py-1.5 pr-4">{f ? <>{fmt.int(f.value)} <span className="text-xs text-faint">({fmt.int(f.lower)}–{fmt.int(f.upper)})</span></> : "—"}</td>;
+                    })}
+                    <td className="py-1.5">{fmt.one(w.pct?.[0]?.value)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartCard>
+      ) : null}
+    </>
   );
 }

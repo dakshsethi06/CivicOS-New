@@ -116,3 +116,15 @@ Unfit samples are scored in percentage points because many wards test at or near
 figure is meaningless. City-wide: 0.51% unfit; about 4,435 MLD drawn and 3,948 MLD supplied a year. The published
 water balance repeats the same figures for 2019-20 and 2020-21, and the range for drawn and supplied rests on only
 four test forecasts, so treat it as rough.
+
+## More indicators (added November 2026)
+
+- **Water lost between the lakes and supply** (MLD and % of water drawn), city, 2020-2024 -> 2025-2028: same three
+  methods and backtest as water drawn and supplied.
+- **Complaint closure**: average days to close a complaint and the share closed (closed / registered), city and every
+  ward, 2023-2025 -> 2026-2028. Only three years are published, so methods that work from two years of history
+  (last year, two-year average, trend) were compared by forecasting 2025 from 2023-2024 across all 25 series; the
+  two-year average won (days: 49% average miss against 64% for repeating last year; share closed: 15.6 points against
+  19.8). Ranges for 2027 and 2028 are widened from that single test year. Treat these as rough.
+- Not forecast: figures published for one year only (water supply hours, waste per person, bulk generators,
+  air-quality days, population), which have no trend.

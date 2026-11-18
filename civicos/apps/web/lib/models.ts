@@ -113,3 +113,22 @@ export function methodsByYear(chosen: Record<string, string> | undefined, firstY
   const yrs = (ys: number[]) => (ys.length === 1 ? `${ys[0]}` : ys.length === 2 ? `${ys[0]} and ${ys[1]}` : `${ys[0]} to ${ys.at(-1)}`);
   return groups.map((g) => `${METHOD_SHORT[g.method] ?? g.method} for ${yrs(g.years)}`).join(", ");
 }
+
+/** forecast_more() (migration 0023): complaint closure and water lost in distribution. */
+type ShortFamily = { label: string; series: number; chosen: string; chosen_by_horizon: Record<string, string>; backtest_years: number[];
+                     mape_pct?: Record<string, number>; mae?: Record<string, number>; interval_pct_by_horizon?: Record<string, number>;
+                     interval_abs_by_horizon?: Record<string, number> };
+export type MoreForecasts = {
+  zone: string | null;
+  closure: {
+    model: { method: string; description: string; trained_on: string;
+             params: { methods: Record<string, string>; families: { days_to_close: ShortFamily; closed_pct: ShortFamily } } } | null;
+    days: { history: { year: number; value: number }[]; forecasts: (YearRange & { method: string })[] };
+    pct: { history: { year: number; value: number }[]; forecasts: (YearRange & { method: string })[] };
+    wards: { code: string; name: string; days_last: number | null; days: YearRange[] | null; pct: YearRange[] | null }[];
+  };
+  water_loss: {
+    history: { year: number; metric: string; value: number }[];
+    forecasts: { year: number; metric: string; value: number; lower: number; upper: number; method: string }[];
+  };
+};

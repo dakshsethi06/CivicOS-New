@@ -10,7 +10,7 @@ import { SERIES } from "@/lib/chart-colors";
 import { cite, fmt } from "@/lib/dashboard";
 import { parseFilters } from "@/lib/filters";
 import { reader, type IndicatorData } from "@/lib/indicators";
-import { methodsByYear, type ForecastExtras } from "@/lib/models";
+import { methodsByYear, type ForecastExtras, type MoreForecasts } from "@/lib/models";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Water" };
@@ -33,10 +33,15 @@ export default async function WaterPage({ searchParams }: PageProps<"/water">) {
   await requireSession();
   const filters = parseFilters(await searchParams);
   const supabase = await createClient();
-  const [{ data, error }, extras] = await Promise.all([
+  const [{ data, error }, extras, moreRes] = await Promise.all([
     supabase.rpc("indicator_rows", { p_metrics: METRICS }),
     supabase.rpc("forecast_extras", { p_zone: filters.zone }),
+    supabase.rpc("forecast_more", { p_zone: null }),     // migration 0023; null before it runs
   ]);
+  const loss = (moreRes.data as MoreForecasts | null)?.water_loss ?? null;
+  const lossHist = (loss?.history ?? []).filter((h) => h.metric === "water_loss_fy_pct").map((h) => ({ year: h.year, value: h.value }));
+  const lossF = (loss?.forecasts ?? []).filter((f) => f.metric === "water_loss_fy_pct");
+  const lossMld = (loss?.forecasts ?? []).filter((f) => f.metric === "water_loss_fy");
   const d = data as IndicatorData | null;
   const water = (extras.data as ForecastExtras | null)?.water ?? null;
 
@@ -218,6 +223,24 @@ export default async function WaterPage({ searchParams }: PageProps<"/water">) {
               <ForecastChart history={supplyF.history} forecasts={supplyF.forecasts} unit="MLD" />
             </ChartCard>
           </div>
+
+          {lossF.length ? (
+            <ChartCard
+              title={`Water lost between the lakes and supply, % of water drawn, forecast to ${fyLabel(lossF.at(-1)!.year)}`}
+              question="How much of the water drawn never reaches the supply network?"
+              note={`By financial year (2024 on the axis is 2023-24). The loss swung between ${Math.min(...lossHist.map((h) => h.value)).toFixed(1)}% and ${Math.max(...lossHist.map((h) => h.value)).toFixed(1)}% in the published years, so the ranges are wide. Forecast by the same tested method as water drawn and supplied.${lossMld[0] ? ` For ${fyLabel(lossMld[0].year)}, about ${fmt.int(lossMld[0].value)} MLD (${fmt.int(lossMld[0].lower)} to ${fmt.int(lossMld[0].upper)}).` : ""}`}
+              source={`${cite(d.sources, ["p25-t2"])} Trained on ${wm.trained_on}.`}
+              table={{
+                columns: ["Year", "% lost", "MLD lost"],
+                rows: [
+                  ...lossHist.map((h) => [fyLabel(h.year), h.value, loss?.history.find((x) => x.year === h.year && x.metric === "water_loss_fy")?.value ?? null] as (string | number | null)[]),
+                  ...lossF.map((f) => [`${fyLabel(f.year)} (forecast)`, `${f.value} (${f.lower} to ${f.upper})`, lossMld.find((m) => m.year === f.year)?.value ?? null]),
+                ],
+              }}
+            >
+              <ForecastChart history={lossHist} forecasts={lossF} decimals={1} unit="%" />
+            </ChartCard>
+          ) : null}
 
           <ChartCard
             title={`Drinking-water samples found unfit by ward, %: forecast ${span}`}
