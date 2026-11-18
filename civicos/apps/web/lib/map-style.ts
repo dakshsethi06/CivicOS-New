@@ -1,18 +1,24 @@
 import type { StyleSpecification } from "maplibre-gl";
 
-/** Light raster basemap (CARTO over OpenStreetMap). Override with NEXT_PUBLIC_MAP_STYLE_URL. */
+/**
+ * Raster basemap: OpenStreetMap's standard tiles, which need no API key (CARTO's basemaps now require one outside
+ * localhost and stamp "API KEY REQUIRED" over the map). Lightly faded so the ward shading and markers stand out.
+ * OSM's tile servers are for modest use; for heavy traffic set NEXT_PUBLIC_MAP_STYLE_URL to a hosted style
+ * (for example MapTiler or Stadia Maps with your key).
+ */
 export const DEFAULT_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     basemap: {
       type: "raster",
-      tiles: ["a", "b", "c", "d"].map((s) => `https://${s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png`),
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
+      maxzoom: 19,
       attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a> · Ward boundaries: <a href="https://github.com/datameet/Municipal_Spatial_Data">DataMeet</a> (CC BY-SA 2.5 IN)',
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Ward boundaries: <a href="https://github.com/datameet/Municipal_Spatial_Data">DataMeet</a> (CC BY-SA 2.5 IN)',
     },
   },
-  layers: [{ id: "basemap", type: "raster", source: "basemap" }],
+  layers: [{ id: "basemap", type: "raster", source: "basemap", paint: { "raster-saturation": -0.6, "raster-opacity": 0.85 } }],
 };
 
 export function bounds(fc: GeoJSON.FeatureCollection): [[number, number], [number, number]] | null {
