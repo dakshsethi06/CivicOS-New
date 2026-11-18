@@ -8,6 +8,7 @@ from sqlalchemy import text
 
 from .auth import User
 from .db import as_user, vector_literal
+from .rag.vectorstore import QdrantStore, rrf
 
 
 class DataAccess(Protocol):
@@ -26,10 +27,12 @@ class DataAccess(Protocol):
 
 
 class SqlData:
-    def __init__(self, user: User):
-        self.user = user
+    def __init__(self, user: User, store: QdrantStore | None = None):
+        self.user, self.store = user, store
 
     def match_chunks(self, query, embedding, k, min_similarity, category):
+        if self.store is not None and embedding is not None:
+            return self._match_with_store(query, embedding, k, min_similarity, category)
         with as_user(self.user) as conn:
             return conn.execute(
                 text("""select public.match_document_chunks(:q, cast(:emb as extensions.vector), :k,
@@ -37,6 +40,26 @@ class SqlData:
                 {"q": query, "emb": vector_literal(embedding) if embedding else None, "k": k, "min": min_similarity,
                  "cat": category},
             ).scalar() or []
+
+    def _match_with_store(self, query, embedding, k, min_similarity, category):
+        """Vector search in the separate vector database, keyword search in Postgres, fused by reciprocal rank; then the
+        chunks are read back through Row Level Security, which drops anything the caller may not see."""
+        hits = self.store.search(self.user.org_id, embedding, limit=40, public_only=self.user.role == "citizen", category=category)
+        with as_user(self.user) as conn:
+            keyword = conn.execute(
+                text("select public.match_document_chunks(:q, null, 12, 0, :cat)"), {"q": query, "cat": category}).scalar() or []
+            fused = rrf(hits, [h["chunk_id"] for h in keyword], min_similarity, min(max(k, 1), 16))
+            if not fused:
+                return []
+            rows = conn.execute(text("select public.document_chunks_by_ids(cast(:ids as bigint[]), :q)"),
+                                {"ids": [cid for cid, _, _ in fused], "q": query}).scalar() or []
+        by_id = {r["chunk_id"]: r for r in rows}
+        out = []
+        for cid, score, sim in fused:
+            r = by_id.get(cid)
+            if r is not None:                 # not visible to this user under RLS: dropped
+                out.append({**r, "score": round(score, 5), "similarity": round(sim, 4) if sim is not None else None})
+        return out
 
     def facts(self, question):
         with as_user(self.user) as conn:

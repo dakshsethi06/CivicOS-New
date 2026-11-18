@@ -19,7 +19,8 @@ from .ops import jobs as ops_jobs
 from .ops import runner
 from .complaints import ai as complaint_ai
 from .providers import ProviderError, get_chat_model, get_embedder, get_reranker, get_vision
-from .rag.ingest import IngestError, embed_missing, ingest
+from .rag.ingest import IngestError, embed_missing, ingest, sync_vector_store
+from .rag.vectorstore import VectorStoreError, get_vector_store
 
 app = FastAPI(title="CivicOS API", version=__version__,
               description="AI layer of CivicOS: document ingestion, semantic retrieval, the hybrid assistant, and the "
@@ -54,7 +55,12 @@ def health(settings: Settings = Depends(get_settings)) -> dict[str, Any]:
             conn.execute(text("select 1"))
     except Exception:  # noqa: BLE001 - health reports, never raises
         db = "unreachable"
-    return {"status": "ok" if db == "ok" else "degraded", "version": __version__, "database": db,
+    try:
+        store = get_vector_store()
+        vectors = {"store": "qdrant", "status": store.status()} if store else {"store": "pgvector", "status": db}
+    except VectorStoreError as e:
+        vectors = {"store": "qdrant", "status": str(e)}
+    return {"status": "ok" if db == "ok" else "degraded", "version": __version__, "database": db, "vectors": vectors,
             "llm": settings.gemini_model if settings.gemini_api_key else None,
             "embeddings": settings.embedding_model_id if settings.gemini_api_key else None}
 
@@ -77,7 +83,7 @@ class AskOut(BaseModel):
 
 @app.post("/v1/assistant/ask", response_model=AskOut)
 def ask(body: AskIn, user: User = Depends(current_user), settings: Settings = Depends(get_settings)) -> AskOut:
-    data = SqlData(user)
+    data = SqlData(user, get_vector_store())
     q = data.quota()
     if not q.get("allowed"):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
@@ -124,8 +130,38 @@ def search(q: str, k: int = 8, user: User = Depends(current_user), settings: Set
         emb = embedder.embed_query(q) if embedder else None
     except ProviderError:
         emb = None                       # keyword search still works
-    hits = SqlData(user).match_chunks(q, emb, min(max(k, 1), 12), settings.rag_min_similarity, None)
-    return {"semantic": emb is not None, "hits": [{k_: v for k_, v in h.items() if k_ != "content"} for h in hits]}
+    store = get_vector_store()
+    hits = SqlData(user, store).match_chunks(q, emb, min(max(k, 1), 12), settings.rag_min_similarity, None)
+    return {"semantic": emb is not None, "vector_store": "qdrant" if store else "pgvector",
+            "hits": [{k_: v for k_, v in h.items() if k_ != "content"} for h in hits]}
+
+
+@app.post("/v1/vector/sync")
+def vector_sync(user: User = Depends(current_officer)) -> dict[str, Any]:
+    """Rebuilds this organization's points in the separate vector database from the vectors in Postgres (no
+    embedding calls). Use after switching VECTOR_STORE to qdrant, or if the index and Postgres have drifted."""
+    store = get_vector_store()
+    if store is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "VECTOR_STORE is pgvector: vectors are searched inside Supabase, nothing to sync.")
+    try:
+        n = sync_vector_store(user, store)
+        return {"synced": n, "in_index": store.count(user.org_id)}
+    except VectorStoreError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
+
+
+@app.post("/v1/documents/{document_id}/forget")
+def document_forget(document_id: str, user: User = Depends(current_officer)) -> dict[str, Any]:
+    """Removes a deleted document's points from the vector database. (Even before this runs, its passages can no
+    longer be returned: every hit is re-read through Postgres, where the document is gone.)"""
+    store = get_vector_store()
+    if store is None:
+        return {"removed": False, "reason": "pgvector: rows were deleted with the document"}
+    try:
+        store.delete_document(user.org_id, document_id)
+    except VectorStoreError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
+    return {"removed": True}
 
 
 # ---------------------------------------------------------------------------------------------------------- complaints

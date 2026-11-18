@@ -31,6 +31,24 @@ whatever this code does. `supabase/tests/rls_isolation.sql` (section 5e) tests e
 | Retrieval: vector similarity fused with full-text match (reciprocal rank fusion), similarity floor | `match_document_chunks` (SQL) |
 | Context, generation, citations | `app/assistant/` |
 
+## Vector database: pgvector or Qdrant
+
+`VECTOR_STORE=pgvector` (default) searches vectors inside Supabase, in `match_document_chunks`. `VECTOR_STORE=qdrant`
+uses a separate Qdrant database (`app/rag/vectorstore.py`, over Qdrant's REST API):
+
+1. Ingestion stores chunks and vectors in Postgres as always, then writes the same vectors to Qdrant with the
+   organization, document, access level and category as payload. Postgres stays the system of record.
+2. A question is embedded once; Qdrant returns the nearest chunks, **filtered to the caller's organization** (and to
+   public documents for residents); Postgres full-text search returns keyword matches; the two rankings are fused
+   (reciprocal rank fusion, as in the SQL path).
+3. The fused chunk ids are read back through `document_chunks_by_ids` **as the signed-in user**, so Row Level Security
+   drops anything the caller may not see, whatever the vector database returned (tested in `rls_isolation.sql` 5j).
+4. `POST /v1/vector/sync` rebuilds an organization's points from the vectors in Postgres (no Gemini calls);
+   `POST /v1/documents/{id}/forget` removes a deleted document's points.
+
+Local Qdrant: `docker compose --profile vector up` (from `civicos/`), then `QDRANT_URL=http://qdrant:6333`.
+Hosted: Qdrant Cloud's free cluster, with `QDRANT_URL` and `QDRANT_API_KEY`.
+
 ## Hybrid assistant
 
 The model (Gemini 3.8 Flash) gets four tools and must call at least one before answering:
@@ -84,6 +102,8 @@ runs them in a background task. Each run is stored in `model_runs` with its metr
 | `GET /v1/me` | signed-in | the caller and their organization |
 | `POST /v1/complaints/{id}/analyse` | anyone who can see the complaint | category by meaning, duplicates within 150 m, photo check; recorded as suggestions |
 | `POST /v1/complaints/embed-missing` | officers | embed older complaints so they can be matched as duplicates |
+| `POST /v1/vector/sync` | officers | rebuild this organization's points in Qdrant from Postgres (VECTOR_STORE=qdrant) |
+| `POST /v1/documents/{id}/forget` | officers | remove a deleted document's points from Qdrant |
 | `POST /v1/ops/demo` | City Administrator | replace operations data with the demonstration dataset and train every model (202, background) |
 | `POST /v1/ops/train` | City Administrator, Professional plan | retrain on the latest readings, re-plan routes, refresh recommendations |
 | `POST /v1/traffic/simulate` `{road_id, action, capacity_factor?, extra_trips?}` | officers, Professional plan | what-if: `close`, `reduce_capacity` or `add_demand`; saved to `traffic_simulations` |

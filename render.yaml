@@ -26,6 +26,13 @@ services:
         value: gemini-3.8-flash
       - key: GEMINI_EMBEDDING_MODEL
         value: gemini-embedding-001
+      # Separate vector database (optional): Qdrant Cloud. Leave VECTOR_STORE as pgvector to search inside Supabase.
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
       # Without REDIS_URL the API trains the water, waste and traffic models in its own process (about a minute).
       # A free instance has 512 MB of memory, which is enough for the demonstration dataset.
 

@@ -20,7 +20,7 @@ begin
         'ops_status', 'ops_water', 'ops_waste', 'ops_traffic', 'water_anomaly_review', 'ops_summary', 'map_layers',
         'complaint_similar', 'complaint_ai_apply', 'complaint_ai_view', 'assistant_ops', 'assistant_nearby',
         'task_create', 'task_action', 'submit_inspection', 'work_list', 'task_detail', 'complaint_reports',
-        'invitation_create', 'accept_invitation', 'invitation_revoke')
+        'invitation_create', 'accept_invitation', 'invitation_revoke', 'document_chunks_by_ids')
   loop
     execute 'drop function if exists ' || f || ' cascade';
   end loop;

@@ -239,7 +239,9 @@ declare
 begin
   select code, name into v_ward from city_zones where st_contains(boundary, st_setsrid(st_makepoint(p_lon, p_lat), 4326)) limit 1;
   f := f || jsonb_build_object('text', format('The point %s, %s is %s', round(p_lat::numeric, 5), round(p_lon::numeric, 5),
-                                              coalesce(format('in Ward %s (%s)', v_ward.code, v_ward.name), 'outside the city''s wards')),
+                                              coalesce(case when v_ward.name is null or v_ward.name ilike '%' || v_ward.code || '%' then format('in Ward %s', v_ward.code)
+                                                   else format('in Ward %s (%s)', v_ward.code, v_ward.name) end,
+                                              'outside the city''s wards')),
                                'source', 'Ward boundaries (DataMeet, Municipal Spatial Data)');
 
   select count(*) as n, string_agg(format('%s %s, %s m, %s', c.reference, coalesce(cc.name, 'uncategorised'), d, replace(c.status, '_', ' ')), '; ' order by d) as list

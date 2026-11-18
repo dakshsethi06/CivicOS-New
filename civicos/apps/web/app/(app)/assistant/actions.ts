@@ -159,5 +159,8 @@ export async function deleteDocument(formData: FormData) {
   const { data } = await supabase.from("documents").select("storage_path").eq("id", id).maybeSingle();
   await supabase.from("documents").delete().eq("id", id);
   if (data?.storage_path) await supabase.storage.from("documents").remove([data.storage_path]);
+  // with a separate vector database, remove the document's vectors too (its passages are already unreachable:
+  // every vector hit is re-read through Postgres, where the document is gone)
+  if (apiConfigured()) await callApi(`/v1/documents/${id}/forget`, undefined, 20_000).catch(() => undefined);
   redirect("/assistant/documents");
 }

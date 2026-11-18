@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     chunk_size: int = 1100                   # characters
     chunk_overlap: int = 160
     max_tool_rounds: int = 4
+    # Where document vectors are searched. "pgvector" (default): inside Supabase. "qdrant": a separate vector database
+    # (Qdrant Cloud or a local container); Postgres still stores every chunk and vector and re-checks access on each hit.
+    vector_store: str = "pgvector"
+    qdrant_url: str | None = None
+    qdrant_api_key: str | None = None
+    qdrant_collection: str = "civicos_chunks"
+
     # Re-ranking: retrieve more candidates, then a fast model scores how well each passage answers the question
     rag_rerank: bool = True
     rag_candidates: int = 16

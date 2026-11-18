@@ -10,6 +10,7 @@ from ..config import Settings
 from ..db import as_user, vector_literal
 from ..providers import Embedder, ProviderError
 from .chunking import chunk_pages
+from .vectorstore import QdrantStore, VectorStoreError, get_vector_store
 from .extract import ExtractionError, extract
 
 
@@ -106,7 +107,47 @@ def ingest(user: User, token: str, document_id: str, settings: Settings, embedde
             {"id": document_id, "pages": len(pages), "n": len(chunks),
              "model": embedder.model_id if vectors is not None else None},  # type: ignore[union-attr]
         )
+        meta = conn.execute(text("select access_level, category from public.documents where id = cast(:id as uuid)"),
+                            {"id": document_id}).mappings().first()
+
+    # the separate vector database, when configured: replace this document's points
+    if vectors is not None:
+        try:
+            store = get_vector_store()
+            if store is not None:
+                store.delete_document(user.org_id, document_id)
+                by_index = {i: cid for cid, i in ids}
+                store.upsert([_point(by_index[c.index], v, user.org_id, document_id, meta, embedder.model_id)  # type: ignore[union-attr]
+                              for c, v in zip(chunks, vectors)])
+        except VectorStoreError as e:
+            warning = f"Stored, but the vector database could not be updated ({e}). Run a vector sync later."
     return IngestResult(document_id, len(pages), len(chunks), vectors is not None, warning)
+
+
+def _point(chunk_id: int, vector: list[float], org_id: str, document_id: str, meta: Any, model: str) -> dict[str, Any]:
+    return {"id": int(chunk_id), "vector": vector,
+            "payload": {"organization_id": org_id, "document_id": str(document_id), "access_level": meta["access_level"],
+                        "category": meta["category"], "model": model}}
+
+
+def sync_vector_store(user: User, store: QdrantStore, batch: int = 500) -> int:
+    """Rebuilds this organization's points in the vector database from the vectors stored in Postgres.
+    No embedding model is called: the vectors are copied, so a rebuild costs nothing."""
+    import json
+
+    store.delete_organization(user.org_id)
+    done, after = 0, 0
+    while True:
+        with as_user(user) as conn:
+            rows = conn.execute(text("""
+                select e.chunk_id, e.document_id::text as document_id, e.model, e.embedding::text as v, d.access_level, d.category
+                  from public.document_embeddings e join public.documents d on d.id = e.document_id
+                 where e.chunk_id > :after order by e.chunk_id limit :n"""), {"after": after, "n": batch}).mappings().all()
+        if not rows:
+            return done
+        store.upsert([_point(r["chunk_id"], json.loads(r["v"]), user.org_id, r["document_id"], r, r["model"]) for r in rows])
+        done += len(rows)
+        after = rows[-1]["chunk_id"]
 
 
 def embed_missing(user: User, embedder: Embedder, limit: int = 2000) -> int:
@@ -138,5 +179,10 @@ def embed_missing(user: User, embedder: Embedder, limit: int = 2000) -> int:
                  "ids": [r["id"] for r in items], "embs": [vector_literal(v) for v in vecs]})
             conn.execute(text("update public.documents set embedding_model = :m where id = cast(:id as uuid)"),
                          {"m": embedder.model_id, "id": doc_id})
+            meta = conn.execute(text("select access_level, category from public.documents where id = cast(:id as uuid)"),
+                                {"id": doc_id}).mappings().first()
+        store = get_vector_store()
+        if store is not None:
+            store.upsert([_point(r["id"], v, user.org_id, doc_id, meta, embedder.model_id) for r, v in zip(items, vecs)])
         done += len(items)
     return done

@@ -934,6 +934,40 @@ begin
   raise notice 'ok   field work: department scoping, tasks, inspection reports, recommendation tasks, invitations, tenancy';
 end $$;
 
+-- ---- 5j. vector database hits are re-read through RLS ------------------------------------------------------
+-- With VECTOR_STORE=qdrant, chunk ids come from outside Postgres; document_chunks_by_ids must still return only
+-- what the caller may see, whatever ids it is given.
+do $$
+declare v_staff bigint[]; v_public bigint[]; r jsonb;
+begin
+  select array_agg(c.id) into v_staff from public.document_chunks c join public.documents d on d.id = c.document_id
+   where d.access_level = 'staff' and d.organization_id = (select id from t_org where tenant = 'A');
+  select array_agg(c.id) into v_public from public.document_chunks c join public.documents d on d.id = c.document_id
+   where d.access_level = 'public' and d.organization_id = (select id from t_org where tenant = 'A');
+  if v_staff is null or v_public is null then raise exception 'FAIL test needs staff and public chunks from section 5d'; end if;
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000002');            -- officer A: both
+  set local role authenticated;
+  r := public.document_chunks_by_ids(v_staff || v_public, 'waste');
+  if jsonb_array_length(r) <> cardinality(v_staff || v_public) then raise exception 'FAIL officer should read every chunk: %', jsonb_array_length(r); end if;
+  if (r -> 0 ->> 'chunk_id')::bigint <> (v_staff || v_public)[1] then raise exception 'FAIL order of ids not kept'; end if;
+  reset role;
+
+  perform pg_temp.login('a0000000-0000-0000-0000-000000000004');            -- resident A: public only
+  set local role authenticated;
+  r := public.document_chunks_by_ids(v_staff || v_public, null);
+  if jsonb_array_length(r) <> cardinality(v_public) or exists (select 1 from jsonb_array_elements(r) x where x ->> 'access_level' <> 'public') then
+    raise exception 'FAIL resident read a staff chunk by id: %', r;
+  end if;
+  reset role;
+
+  perform pg_temp.login('b0000000-0000-0000-0000-000000000001');            -- tenant B: nothing of A's
+  set local role authenticated;
+  if jsonb_array_length(public.document_chunks_by_ids(v_staff || v_public, null)) <> 0 then raise exception 'FAIL tenant B read A''s chunks by id'; end if;
+  reset role;
+  raise notice 'ok   vector database hits re-read through RLS: staff, resident and other tenant';
+end $$;
+
 -- ---- 6. plan limit (free = 5 staff; citizens do not use a seat) ---------------------
 do $$
 begin

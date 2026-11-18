@@ -23,6 +23,7 @@ says "Demo data". A city can replace it with its own feeds.
 ```
 apps/web/              Next.js (App Router, TypeScript, Tailwind)              -> Vercel
 apps/api/              Python backend (FastAPI): RAG, assistant, water/waste/traffic models -> Render
+                       (document vectors in pgvector, or a separate Qdrant database with VECTOR_STORE=qdrant)
 supabase/migrations/   Postgres schema, RLS policies, pgvector, Mumbai data   -> Supabase
 supabase/tests/        Tenant-isolation and data tests (run in CI)
 data/mumbai/           Extraction scripts, extracted tables, and model training (ml/)
