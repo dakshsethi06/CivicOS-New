@@ -223,7 +223,7 @@ writes fail, that no table has RLS off, and that the dashboard returns the figur
 
 ## Map basemap
 
-CARTO's dark raster tiles over OpenStreetMap data by default, with attribution on the map.
+OpenStreetMap's standard tiles by default (no API key needed), with attribution on the map.
 Set `NEXT_PUBLIC_MAP_STYLE_URL` to use another MapLibre style.
 
 ## Assistant and knowledge base

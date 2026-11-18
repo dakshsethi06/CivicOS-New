@@ -11,7 +11,10 @@
 4. Air-quality forecast for each month of 2026-2028: monthly AQI 2016-2025, four seasonal methods
    compared by forecasting each whole year 2022-2025 from the years up to 1, 2 and 3 years before.
 5. Water forecasts for 2025-2028 (the latest published water year is 2024): drinking-water samples
-   unfit per ward and city, and water drawn and supplied city-wide, 2020-2024.
+   unfit per ward and city, and water drawn, supplied and lost in distribution city-wide, 2020-2024.
+6. Complaint closure forecasts for 2026-2028: average days to close a complaint and the share of
+   complaints closed, per ward and city, from the three published years 2023-2025. Only one year
+   ahead can be tested (2025 from 2023-2024, across 25 series); later ranges are widened from it.
 
 Where a horizon cannot be tested on at least two past years (short series), its interval is the
 widest tested one scaled by sqrt(horizon / tested horizon), and the model records that it did so.
@@ -152,11 +155,15 @@ def f_mean3(hist, h): return float(np.mean(hist[-3:]))
 def f_trend(hist, h):
     x = np.arange(len(hist)); b, a = np.polyfit(x, hist, 1)
     return max(0.0, float(a + b * (len(hist) - 1 + h)))
+def f_mean2(hist, h): return float(np.mean(hist[-2:]))
+SHORT_METHODS = {"naive": ("Last year's value", f_naive),
+                 "mean2": ("Average of the last two years", f_mean2),
+                 "trend": ("Straight-line trend over all earlier years", f_trend)}
 METHODS = {"naive": ("Last year's value", f_naive),
            "mean3": ("Average of the last three years", f_mean3),
            "trend": ("Straight-line trend over all earlier years", f_trend)}
 
-def backtest(ser, years, test_years, methods, horizons, error="relative", min_hist=3):
+def backtest(ser, years, test_years, methods, horizons, error="relative", min_hist=3, min_test_years=2):
     """Forecast every test year from the years up to h years before it, for each horizon h.
 
     ser maps a series key to its values, aligned with `years`. For each horizon that could be tested
@@ -179,7 +186,7 @@ def backtest(ser, years, test_years, methods, horizons, error="relative", min_hi
                     ab[m].append(abs(p - ys[i]))
                     if ys[i] > 0: rel[m].append(abs(p - ys[i]) / ys[i])
         per_h[h] = {"rel": rel, "abs": ab, "years": sorted(tested)}
-    tested_h = [h for h in horizons if len(per_h[h]["years"]) >= 2]
+    tested_h = [h for h in horizons if len(per_h[h]["years"]) >= min_test_years]
     assert tested_h and tested_h[0] == 1, "horizon 1 must be testable"
     key = "rel" if error == "relative" else "abs"
     score = {h: {m: float(np.mean(per_h[h][key][m])) for m in methods} for h in tested_h}
@@ -216,12 +223,15 @@ def backtest(ser, years, test_years, methods, horizons, error="relative", min_hi
         out["interval_abs_by_horizon"] = {str(h): round(q, 3) for h, q in intervals.items()}
     return out, intervals, chosen
 
-def emit(model, metric, fam, zone, category, ys, last_year, years_out, chosen, intervals, error, decimals=0):
+def emit(model, metric, fam, zone, category, ys, last_year, years_out, chosen, intervals, error, decimals=0, methods=None, cap=None):
     """One forecast row per target year, each made by the method and with the interval for its horizon."""
     rnd = (lambda v: round(v)) if decimals == 0 else (lambda v: round(v, decimals))
+    methods = methods or METHODS
     for y in years_out:
-        h = y - last_year; p = METHODS[chosen[h]][1](ys, h); q = intervals[h]
+        h = y - last_year; p = methods[chosen[h]][1](ys, h); q = intervals[h]
+        if cap is not None: p = min(p, cap)
         lo, hi = (p * (1 - q), p * (1 + q)) if error == "relative" else (p - q, p + q)
+        if cap is not None: hi = min(hi, cap)
         forecasts.append({"model": model, "metric": metric, "month": None, "zone": zone, "category": category,
                           "year": y, "value": rnd(p), "lower": max(0, rnd(lo)), "upper": rnd(hi),
                           "method": chosen[h], "family": fam})
@@ -391,32 +401,82 @@ um, uiv, uch = backtest(unfit_ser, WT_YEARS, WT_BACKTEST, METHODS, WT_HORIZONS, 
 fy_ser = {k: series(None, k, None, WT_YEARS) for k in ["water_yield_fy", "water_supply_fy"]}
 fy_ser = {k: v for k, v in fy_ser.items() if v}
 fm_, fiv, fch = backtest(fy_ser, WT_YEARS, WT_BACKTEST, METHODS, WT_HORIZONS)
+# water lost between the lakes and the taps, MLD and % of water drawn (a noisy series: 7.7% to 13.3%)
+loss_ser = {k: series(None, k, None, WT_YEARS) for k in ["water_loss_fy", "water_loss_fy_pct"]}
+loss_ser = {k: v for k, v in loss_ser.items() if v}
+lm_, liv, lch = backtest(loss_ser, WT_YEARS, WT_BACKTEST, METHODS, WT_HORIZONS)
 water_metrics = {"unfit": {"label": "Drinking-water samples unfit, wards and city", **um},
-                 "city_water_fy": {"label": "Water drawn and supplied, city", **fm_}}
+                 "city_water_fy": {"label": "Water drawn and supplied, city", **fm_},
+                 "city_water_loss": {"label": "Water lost in distribution, city", **lm_}}
 for z, ys in unfit_ser.items():
     emit("water-forecast", "water_unfit_samples_pct", "unfit", z, None, ys, WT_YEARS[-1], WT_OUT, uch, uiv, "absolute", decimals=2)
 for k, ys in fy_ser.items():
     emit("water-forecast", k, "city_water_fy", None, None, ys, WT_YEARS[-1], WT_OUT, fch, fiv, "relative")
+for k, ys in loss_ser.items():
+    emit("water-forecast", k, "city_water_loss", None, None, ys, WT_YEARS[-1], WT_OUT, lch, liv, "relative",
+         decimals=2 if k.endswith("_pct") else 0, cap=100 if k.endswith("_pct") else None)
 
 water_model = {
     "id": "water-forecast",
     "name": "Water forecasts",
     "kind": "forecast",
     "method": "Best of three simple methods by backtest on 2023 and 2024; 80% interval from that method's backtest errors, widened for later years",
-    "description": f"Predicts the share of drinking-water samples found unfit (by ward and city-wide) and the water drawn and supplied city-wide, for {WT_OUT[0]} to {WT_OUT[-1]}. Water figures are published only to {WT_YEARS[-1]}, from five years, so only one year ahead could be tested and later ranges are widened from that test.",
+    "description": f"Predicts the share of drinking-water samples found unfit (by ward and city-wide) and the water drawn, supplied and lost in distribution city-wide, for {WT_OUT[0]} to {WT_OUT[-1]}. Water figures are published only to {WT_YEARS[-1]}, from five years, so only one year ahead could be tested and later ranges are widened from that test.",
     "params": {"methods": {m: l for m, (l, _) in METHODS.items()}, "backtest_years": WT_BACKTEST, "forecast_years": WT_OUT,
                "families": water_metrics},
     "metrics": {"unfit": {"mae_points": um["mae"][um["chosen"]], "naive_mae_points": um["mae"]["naive"]},
-                "city_water_fy": {"mape_pct": fm_["mape_pct"][fm_["chosen"]], "naive_mape_pct": fm_["mape_pct"]["naive"]}},
-    "trained_on": "Drinking-water samples unfit 2020-2024 (Praja Foundation 2025 report, Table 7); water drawn and supplied FY 2019-20 to 2023-24 (Table 2)",
+                "city_water_fy": {"mape_pct": fm_["mape_pct"][fm_["chosen"]], "naive_mape_pct": fm_["mape_pct"]["naive"]},
+                "city_water_loss": {"mape_pct": lm_["mape_pct"][lm_["chosen"]], "naive_mape_pct": lm_["mape_pct"]["naive"]}},
+    "trained_on": "Drinking-water samples unfit 2020-2024 (Praja Foundation 2025 report, Table 7); water drawn, supplied and lost FY 2019-20 to 2023-24 (Table 2)",
 }
 
-json.dump({"trained_at": date.today().isoformat(), "models": [cluster_model, forecast_model, waste_model, aqi_model, water_model],
+# ---------------------------------------------------------------------------
+# 6. Complaint closure, 2023-2025 -> 2026, 2027, 2028
+# ---------------------------------------------------------------------------
+CL_YEARS = [2023, 2024, 2025]
+CL_HORIZONS = [y - CL_YEARS[-1] for y in FORECAST_YEARS]
+
+def closed_pct(zone, year):
+    c, r = val(zone, year, "complaints_closed"), val(zone, year, "complaints_registered")
+    return round(100 * c / r, 2) if c is not None and r else None
+
+days_ser = {z: series(z, "avg_days_to_close", None, CL_YEARS) for z in WARDS + [None]}
+days_ser = {z: v for z, v in days_ser.items() if v}
+pct_ser = {}
+for z in WARDS + [None]:
+    ys = [closed_pct(z, y) for y in CL_YEARS]
+    if all(v is not None for v in ys): pct_ser[z] = ys
+# three years: forecast 2025 from 2023-2024 (one test year, but 25 series), from two years of history
+dm_, div_, dch = backtest(days_ser, CL_YEARS, [2025], SHORT_METHODS, CL_HORIZONS, min_hist=2, min_test_years=1)
+pm_, piv, pch = backtest(pct_ser, CL_YEARS, [2025], SHORT_METHODS, CL_HORIZONS, error="absolute", min_hist=2, min_test_years=1)
+closure_metrics = {"days_to_close": {"label": "Average days to close a complaint, wards and city", **dm_},
+                   "closed_pct": {"label": "Share of complaints closed (%), wards and city", **pm_}}
+for z, ys in days_ser.items():
+    emit("closure-forecast", "avg_days_to_close", "days_to_close", z, None, ys, CL_YEARS[-1], FORECAST_YEARS, dch, div_, "relative",
+         methods=SHORT_METHODS)
+for z, ys in pct_ser.items():
+    emit("closure-forecast", "complaints_closed_pct", "closed_pct", z, None, ys, CL_YEARS[-1], FORECAST_YEARS, pch, piv, "absolute",
+         decimals=1, methods=SHORT_METHODS, cap=100)
+
+closure_model = {
+    "id": "closure-forecast",
+    "name": "Complaint closure forecasts",
+    "kind": "forecast",
+    "method": "Best of three simple methods (last year, average of two years, trend) by forecasting 2025 from 2023-2024 across every ward and the city; 80% interval from those errors, widened for 2027 and 2028",
+    "description": "Predicts the average days to close a complaint and the share of complaints closed, for each ward and the city, in 2026, 2027 and 2028. Only three years are published (2023-2025), so only one year ahead could be tested, on one year; treat 2027 and 2028 as rough.",
+    "params": {"methods": {m: l for m, (l, _) in SHORT_METHODS.items()}, "backtest_years": [2025], "forecast_years": FORECAST_YEARS,
+               "families": closure_metrics},
+    "metrics": {"days_to_close": {"mape_pct": dm_["mape_pct"][dm_["chosen"]], "naive_mape_pct": dm_["mape_pct"]["naive"]},
+                "closed_pct": {"mae_points": pm_["mae"][pm_["chosen"]], "naive_mae_points": pm_["mae"]["naive"]}},
+    "trained_on": "Complaints closed and average days to close 2023-2025; Praja Foundation 2025 and 2026 reports",
+}
+
+json.dump({"trained_at": date.today().isoformat(), "models": [cluster_model, forecast_model, waste_model, aqi_model, water_model, closure_model],
            "clusters": assignments, "forecasts": forecasts}, open(sys.argv[2], "w", newline="\n"), indent=1)
 
 print("ward groups:", "reused from previous results" if KEEP_CLUSTERS else "retrained",
       "k =", cluster_model["params"]["k"])
-for name, fams in [("complaints", family_metrics), ("waste", waste_metrics), ("water", water_metrics)]:
+for name, fams in [("complaints", family_metrics), ("waste", waste_metrics), ("water", water_metrics), ("closure", closure_metrics)]:
     for fam, m in fams.items():
         iv_ = m.get("interval_pct_by_horizon") or m.get("interval_abs_by_horizon")
         err = m.get("mape_pct") or m["mae"]
