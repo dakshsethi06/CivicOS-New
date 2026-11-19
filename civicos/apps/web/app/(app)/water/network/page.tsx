@@ -250,8 +250,12 @@ export default async function WaterNetworkPage({ searchParams }: PageProps<"/wat
         </ChartCard>
       </div>
 
-      <h2 className="pt-2 text-sm font-medium">How the models were tested</h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <details className="group rounded-xl border border-line bg-panel">
+        <summary className="cursor-pointer list-none px-5 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+          <span className="mr-1.5 inline-block text-muted transition-transform group-open:rotate-90">›</span>How the models were tested
+          <span className="ml-2 text-xs font-normal text-muted">accuracy against simple baselines, on held-out data</span>
+        </summary>
+        <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
         <ModelCard title="A. Anomaly detection" method={runs["water-anomaly"]?.method} trainedAt={runs["water-anomaly"]?.trained_at} demo={runs["water-anomaly"]?.is_demo}
           columns={["Measure", "Value"]}
           rows={[["Faults found", am.faults_detected ?? "—"], ["Alerts that were real faults", am.event_precision != null ? `${Math.round(am.event_precision * 100)}%` : "—"],
@@ -285,7 +289,8 @@ export default async function WaterNetworkPage({ searchParams }: PageProps<"/wat
         </ModelCard>
         <ModelCard title="D. Shortage risk" method={runs["water-shortage"]?.method} trainedAt={runs["water-shortage"]?.trained_at} demo={runs["water-shortage"]?.is_demo}
           note="A water balance, not a learned model: each reservoir's level is carried forward a day at a time, adding last week's average inflow and subtracting the ward's forecast demand." />
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

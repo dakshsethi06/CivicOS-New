@@ -159,8 +159,12 @@ export default async function TrafficPage({ searchParams }: PageProps<"/traffic"
         </section>
       ) : null}
 
-      <h2 className="pt-2 text-sm font-medium">How the models were tested</h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <details className="group rounded-xl border border-line bg-panel">
+        <summary className="cursor-pointer list-none px-5 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+          <span className="mr-1.5 inline-block text-muted transition-transform group-open:rotate-90">›</span>How the models were tested
+          <span className="ml-2 text-xs font-normal text-muted">accuracy against simple baselines, on held-out data</span>
+        </summary>
+        <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
         <ModelCard title="Congestion forecasting" method={d.runs["traffic-congestion"]?.method} trainedAt={d.runs["traffic-congestion"]?.trained_at} demo={d.runs["traffic-congestion"]?.is_demo}
           columns={["Horizon", "XGBoost MAE", "No change", "Usual for the time", "XGBoost RMSE"]}
           rows={H.filter((h) => cm[`${h}min`]).map((h) => [`${h} minutes`, `${cm[`${h}min`].xgboost.mae} km/h`, `${cm[`${h}min`].no_change.mae} km/h`, `${cm[`${h}min`].usual_for_time.mae} km/h`, `${cm[`${h}min`].xgboost.rmse} km/h`])}
@@ -169,7 +173,8 @@ export default async function TrafficPage({ searchParams }: PageProps<"/traffic"
           columns={["Measure", "Value"]}
           rows={[["Peak-hour trips", fmt.int(am.peak_hour_trips)], ["Roads", fmt.int(am.roads)], ["Junctions", fmt.int(am.junctions)]]}
           note="Trips between junctions follow a gravity model on ward population, calibrated so the busiest tenth of roads run near capacity. Travel time rises with volume over capacity (BPR). This is a simplified macroscopic model, not a microsimulation such as SUMO, and its results are simulated." />
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

@@ -164,11 +164,15 @@ export function BarSeriesChart({
   );
 }
 
-/** Card shell: the title states what is plotted, the subtitle the question it answers, and "View data" gives the same numbers as a table. */
+/**
+ * Card shell, simple by default: the title says what is plotted, the subtitle the question it answers, then the chart.
+ * The method, testing and source notes are one click away ("How this was calculated"), next to "View data", which
+ * gives the same numbers as a table. A caveat that must always be seen (e.g. "prototype index") goes in `caveat`.
+ */
 export function ChartCard({
-  title, question, note, source, table, children, className = "",
+  title, question, note, source, caveat, table, children, className = "",
 }: {
-  title: string; question?: string; note?: string; source?: string; children: ReactNode; className?: string;
+  title: string; question?: string; note?: string; source?: string; caveat?: string; children: ReactNode; className?: string;
   table?: { columns: string[]; rows: (string | number | null)[][] };
 }) {
   return (
@@ -176,10 +180,20 @@ export function ChartCard({
       <h3 className="text-sm font-medium text-ink">{title}</h3>
       {question ? <p className="mt-0.5 text-xs text-muted">{question}</p> : null}
       <div className="mt-4">{children}</div>
-      {note ? <p className="mt-3 text-xs text-faint">{note}</p> : null}
-      {source ? <p className="mt-1.5 text-xs text-faint">{source}</p> : null}
+      {caveat ? <p className="mt-3 text-xs font-medium text-warn">{caveat}</p> : null}
+      {note || source ? (
+        <details className="group mt-3 text-xs">
+          <summary className="cursor-pointer list-none text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+            <span className="mr-1 inline-block transition-transform group-open:rotate-90">›</span>How this was calculated
+          </summary>
+          <div className="mt-2 space-y-1.5 border-l-2 border-line pl-3 leading-relaxed text-faint">
+            {note ? <p>{note}</p> : null}
+            {source ? <p>{source}</p> : null}
+          </div>
+        </details>
+      ) : null}
       {table && table.rows.length > 0 ? (
-        <details className="mt-3 text-xs print:hidden">
+        <details className="mt-2 text-xs print:hidden">
           <summary className="cursor-pointer text-muted hover:text-ink">
             View data
             <button

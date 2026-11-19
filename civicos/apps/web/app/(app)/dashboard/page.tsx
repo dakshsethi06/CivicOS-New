@@ -129,7 +129,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       <ChartCard
         title={`City Health Index: ${scope}`}
         question="How healthy is the city overall, and what is raising or lowering the score?"
-        note="Prototype index for demonstration, not an official municipal rating. A component with no published figure for a ward is left out and the other weights are scaled up."
+        caveat="Prototype index for demonstration, not an official municipal rating."
+        note="A component with no published figure for a ward is left out and the other weights are scaled up."
         source={`Computed from: ${cite(sources, ["p26-t3", "p25-t4", "p25-t7", "p26-t30"]).replace("Source: ", "")}`}
         table={{ columns: ["Ward", "Health score"], rows: withHealth.map((w) => [w.name, w.health_score]) }}
       >

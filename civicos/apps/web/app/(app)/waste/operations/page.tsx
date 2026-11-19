@@ -152,8 +152,12 @@ export default async function WasteOperationsPage({ searchParams }: PageProps<"/
         </div>
       </section>
 
-      <h2 className="pt-2 text-sm font-medium">How the models were tested</h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <details className="group rounded-xl border border-line bg-panel">
+        <summary className="cursor-pointer list-none px-5 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+          <span className="mr-1.5 inline-block text-muted transition-transform group-open:rotate-90">›</span>How the models were tested
+          <span className="ml-2 text-xs font-normal text-muted">accuracy against simple baselines, on held-out data</span>
+        </summary>
+        <div className="grid gap-4 border-t border-line p-4 lg:grid-cols-2">
         <ModelCard title="A and B. Fill forecast and overflow prediction" method={d.runs["waste-overflow"]?.method} trainedAt={d.runs["waste-overflow"]?.trained_at} demo={d.runs["waste-overflow"]?.is_demo}
           columns={["Horizon", "Fill error, XGBoost", "Fill error, straight line", "AUC", "Brier", "Precision", "Recall"]}
           rows={[6, 12, 24].filter((h) => ov[`${h}h`]).map((h) => {
@@ -167,7 +171,8 @@ export default async function WasteOperationsPage({ searchParams }: PageProps<"/
           rows={[["Forecast-led, optimised", `${fmt.one(optKm)} km`, sum(opt, "bins_visited"), `${sum(opt, "priority_covered")} of ${sum(opt, "priority_bins")}`],
                  ["Fixed schedule", `${fmt.one(fixKm)} km`, sum(fixed, "bins_visited"), `${sum(fixed, "priority_covered")} of ${sum(fixed, "priority_bins")}`]]}
           note="A capacitated vehicle routing problem per ward: each truck starts and ends at its depot, carries up to three times its body volume (compaction), and the solver minimises distance. Distances are straight lines × 1.3." />
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

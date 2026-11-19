@@ -28,21 +28,26 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-0.5">
-      {items.map((item) => {
+      {items.map((item, i) => {
+        const heading = i === 0 || items[i - 1].group !== item.group ? (
+          <p key={`g-${item.group}`} className={`px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-faint ${i === 0 ? "" : "pt-4"}`}>
+            {item.group}
+          </p>
+        ) : null;
         const Icon = ICONS[item.icon];
         const active = pathname === item.href || pathname.startsWith(item.href + "/");
         const base = "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-200";
 
         if (item.phase > CURRENT_PHASE) {
-          return (
+          return [heading,
             <span key={item.href} aria-disabled="true" className={`${base} cursor-not-allowed text-faint`} title={item.disabledNote ?? `Arrives in phase ${item.phase}`}>
               <Icon className="size-4 shrink-0" aria-hidden="true" />
               <span className="flex-1">{item.label}</span>
               <span className="rounded border border-line px-1.5 py-px text-[10px] uppercase tracking-wide">{item.disabledNote ? "No data" : `P${item.phase}`}</span>
-            </span>
-          );
+            </span>,
+          ];
         }
-        return (
+        return [heading,
           <Link
             key={item.href}
             href={item.href}
@@ -52,8 +57,8 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
             <span aria-hidden="true" className={`absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-accent transition-all duration-300 ${active ? "opacity-100" : "scale-y-0 opacity-0"}`} />
             <Icon className={`size-4 shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? "text-accent" : ""}`} aria-hidden="true" />
             {item.label}
-          </Link>
-        );
+          </Link>,
+        ];
       })}
     </nav>
   );
